@@ -17,15 +17,20 @@
       <canvas id="game" width="420" height="720"></canvas>
       <div class="scanlines"></div>
       <div class="screen-glow"></div>
+      <div class="level-banner hidden" id="levelBanner">LEVEL 1</div>
     </div>
     <div class="hud">
       <div class="hud-row">
         <div class="hud-block" id="hud-lives"></div>
-        <div class="hud-block" id="hud-score"></div>
+        <div class="hud-block" id="hud-shield"></div>
       </div>
       <div class="hud-row">
+        <div class="hud-block" id="hud-score"></div>
         <div class="hud-block" id="hud-level"></div>
-        <div class="hud-block" id="hud-time"></div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-block" id="hud-weapon"></div>
+        <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound">🔊</button>
       </div>
     </div>
   </div>
@@ -36,17 +41,10 @@
         <span>COMBAT</span>
         <span>PRARO</span>
       </div>
-      <p>Управление: ← → / A D · Стрельба: ПРОБЕЛ</p>
+      <p>Управление: ← → ↑ ↓ / WASD · Стрельба: ПРОБЕЛ</p>
+      <p>На телефоне: ведите палец по экрану и жмите FIRE.</p>
       <p>Уклоняйтесь от врагов и их пуль. Соберите максимум очков!</p>
       <button id="startButton">START</button>
-    </div>
-  </div>
-
-  <div class="overlay hidden" id="levelOverlay">
-    <div class="panel">
-      <h2>LEVEL COMPLETE</h2>
-      <p id="levelStats"></p>
-      <button id="nextLevel">NEXT</button>
     </div>
   </div>
 
@@ -56,6 +54,13 @@
       <p id="endStats"></p>
       <button id="restart">RESTART</button>
     </div>
+  </div>
+
+  <div class="mobile-controls">
+    <div class="touch-area" id="touchArea">
+      <span>DRAG</span>
+    </div>
+    <button class="fire-button" id="fireButton">FIRE</button>
   </div>
 
   <script src="game.js"></script>
