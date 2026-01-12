@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sky Salvage</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="hud">
+    <div class="hud-row">
+      <div class="hud-block" id="hearts"></div>
+      <div class="hud-block" id="weapon"></div>
+    </div>
+    <div class="hud-row">
+      <div class="hud-block" id="coins"></div>
+      <div class="hud-block" id="time"></div>
+      <div class="hud-block" id="level"></div>
+    </div>
+  </div>
+  <canvas id="game"></canvas>
+  <div class="overlay hidden" id="gameOver">
+    <div class="panel">
+      <h1>Поражение</h1>
+      <p id="finalStats"></p>
+      <button id="restart">Начать заново</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
