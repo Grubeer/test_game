@@ -1,5 +1,13 @@
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const displayCtx = canvas.getContext("2d");
+const bufferCanvas = document.createElement("canvas");
+const ctx = bufferCanvas.getContext("2d");
+const GAME_WIDTH = 240;
+const GAME_HEIGHT = 400;
+bufferCanvas.width = GAME_WIDTH;
+bufferCanvas.height = GAME_HEIGHT;
+displayCtx.imageSmoothingEnabled = false;
+ctx.imageSmoothingEnabled = false;
 
 const hudScore = document.getElementById("hud-score");
 const hudLevel = document.getElementById("hud-level");
@@ -16,8 +24,11 @@ const playerNameInput = document.getElementById("playerName");
 const saveResultButton = document.getElementById("saveResult");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restart");
+const backToMenuButton = document.getElementById("backToMenu");
 const soundToggle = document.getElementById("soundToggle");
 const pauseButton = document.getElementById("pauseButton");
+const finishButton = document.getElementById("finishButton");
+const finishButtonPause = document.getElementById("finishButtonPause");
 const statsToggle = document.getElementById("statsToggle");
 const statsPanel = document.getElementById("statsPanel");
 const leaderboard = document.getElementById("leaderboard");
@@ -220,6 +231,14 @@ const state = {
   audio: null,
   musicTimer: null,
   currentTrack: null,
+  runSaved: false,
+  view: {
+    x: 0,
+    y: 0,
+    scale: 1,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+  },
   stats: {
     playerName: "Гость",
     kills: 0,
@@ -242,17 +261,35 @@ const state = {
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const rand = (min, max) => Math.random() * (max - min) + min;
 
+function resizeCanvas() {
+  const width = Math.floor(canvas.clientWidth);
+  const height = Math.floor(canvas.clientHeight);
+  canvas.width = width;
+  canvas.height = height;
+  const scale = Math.max(1, Math.floor(Math.min(width / GAME_WIDTH, height / GAME_HEIGHT)));
+  const viewWidth = GAME_WIDTH * scale;
+  const viewHeight = GAME_HEIGHT * scale;
+  state.view = {
+    x: Math.floor((width - viewWidth) / 2),
+    y: Math.floor((height - viewHeight) / 2),
+    scale,
+    width: viewWidth,
+    height: viewHeight,
+  };
+  displayCtx.imageSmoothingEnabled = false;
+}
+
 function initStarfield() {
   state.starfield = Array.from({ length: 90 }, () => ({
-    x: rand(0, canvas.width),
-    y: rand(0, canvas.height),
+    x: rand(0, GAME_WIDTH),
+    y: rand(0, GAME_HEIGHT),
     size: Math.floor(rand(1, 3)),
     speed: rand(25, 70),
     twinkle: rand(0.2, 1),
   }));
   state.farStars = Array.from({ length: 70 }, () => ({
-    x: rand(0, canvas.width),
-    y: rand(0, canvas.height),
+    x: rand(0, GAME_WIDTH),
+    y: rand(0, GAME_HEIGHT),
     size: 1,
     speed: rand(10, 25),
   }));
@@ -281,8 +318,8 @@ function resetStats() {
 function resetPlayer() {
   const skin = playerSkins[state.levelIndex] || playerSkins[playerSkins.length - 1];
   state.player = {
-    x: canvas.width / 2,
-    y: canvas.height * 0.75,
+    x: GAME_WIDTH / 2,
+    y: GAME_HEIGHT * 0.75,
     width: 30,
     height: 44,
     speed: skin.speed,
@@ -327,9 +364,13 @@ function startGame() {
   state.score = 0;
   state.levelIndex = 0;
   state.time = 0;
+  state.runSaved = false;
   startOverlay.classList.add("hidden");
   endOverlay.classList.add("hidden");
   pauseOverlay.classList.add("hidden");
+  saveResultButton.disabled = false;
+  saveResultButton.textContent = "СОХРАНИТЬ РЕЗУЛЬТАТ";
+  playerNameInput.disabled = false;
   resetStats();
   resetLevel();
   initAudio();
@@ -338,10 +379,19 @@ function startGame() {
 
 function endGame(win) {
   state.phase = "end";
+  state.runSaved = false;
   endOverlay.classList.remove("hidden");
   endTitle.textContent = win ? "ПОБЕДА!" : "ИГРА ОКОНЧЕНА";
-  endStats.textContent = `ОЧКИ: ${state.score} · ВРЕМЯ: ${state.time.toFixed(1)}с`;
+  endStats.textContent = `ОЧКИ: ${state.score} · ВРЕМЯ: ${state.time.toFixed(1)}с · УНИЧТОЖЕНО: ${state.stats.kills} · ПРОПУЩЕНО: ${state.stats.missed}`;
+  saveResultButton.disabled = false;
+  saveResultButton.textContent = "СОХРАНИТЬ РЕЗУЛЬТАТ";
+  playerNameInput.disabled = false;
   playSfx(win ? "win" : "lose");
+}
+
+function finishGame() {
+  if (state.phase === "end") return;
+  endGame(false);
 }
 
 function togglePause() {
@@ -390,6 +440,13 @@ function playTone(freq, duration, type = "square", volume = 0.2) {
   gain.connect(state.audio.sfxGain);
   osc.start();
   osc.stop(state.audio.currentTime + duration);
+}
+
+function triggerVibration(duration) {
+  if (!state.soundOn) return;
+  if (typeof navigator !== "undefined" && navigator.vibrate) {
+    navigator.vibrate(duration);
+  }
 }
 
 function playSfx(type) {
@@ -484,7 +541,7 @@ function spawnEnemy() {
   const height = type.armored ? 38 : 30;
   state.enemies.push({
     type,
-    x: rand(30, canvas.width - 30),
+    x: rand(30, GAME_WIDTH - 30),
     y: -40,
     width,
     height,
@@ -582,12 +639,12 @@ function handlePlayerInput(dt, now) {
   state.player.x = clamp(
     state.player.x + dx * state.player.speed * dt,
     30,
-    canvas.width - 30
+    GAME_WIDTH - 30
   );
   state.player.y = clamp(
     state.player.y + dy * state.player.speed * dt,
     80,
-    canvas.height - 30
+    GAME_HEIGHT - 30
   );
 
   const delay = 1000 / state.player.fireRate;
@@ -614,16 +671,16 @@ function handlePlayerInput(dt, now) {
 function updateStarfield(dt) {
   state.farStars.forEach((star) => {
     star.y += star.speed * dt;
-    if (star.y > canvas.height) {
+    if (star.y > GAME_HEIGHT) {
       star.y = -10;
-      star.x = rand(0, canvas.width);
+      star.x = rand(0, GAME_WIDTH);
     }
   });
   state.starfield.forEach((star) => {
     star.y += star.speed * dt;
-    if (star.y > canvas.height) {
+    if (star.y > GAME_HEIGHT) {
       star.y = -10;
-      star.x = rand(0, canvas.width);
+      star.x = rand(0, GAME_WIDTH);
     }
   });
 }
@@ -659,7 +716,7 @@ function updateEnemies(dt) {
   });
 
   state.enemies = state.enemies.filter((enemy) => {
-    if (enemy.y > canvas.height + 40) {
+    if (enemy.y > GAME_HEIGHT + 40) {
       applyMissPenalty();
       return false;
     }
@@ -694,7 +751,7 @@ function updateBullets(dt) {
   state.enemyBullets = state.enemyBullets.filter((bullet) => {
     bullet.y += Math.sin(bullet.angle) * bullet.speed * dt;
     bullet.x += Math.cos(bullet.angle) * bullet.speed * dt;
-    return bullet.y < canvas.height + 40;
+    return bullet.y < GAME_HEIGHT + 40;
   });
 }
 
@@ -702,7 +759,7 @@ function updatePowerups(dt) {
   state.powerups = state.powerups.filter((power) => {
     power.y += power.speed * dt;
     power.ttl -= dt;
-    return power.ttl > 0 && power.y < canvas.height + 20;
+    return power.ttl > 0 && power.y < GAME_HEIGHT + 20;
   });
 }
 
@@ -760,14 +817,14 @@ function handleCollisions() {
   if (state.player.invuln <= 0) {
     state.enemyBullets.forEach((bullet) => {
       if (intersects({ x: bullet.x, y: bullet.y, width: bullet.width, height: bullet.height }, state.player)) {
-        bullet.y = canvas.height + 200;
+        bullet.y = GAME_HEIGHT + 200;
         applyDamage(1);
       }
     });
 
     state.enemies.forEach((enemy) => {
       if (intersects(enemy, state.player)) {
-        enemy.y = canvas.height + 100;
+        enemy.y = GAME_HEIGHT + 100;
         applyDamage(1);
       }
     });
@@ -798,6 +855,7 @@ function applyDamage(amount) {
     hudLives.classList.add("flash");
     setTimeout(() => hudLives.classList.remove("flash"), 400);
     playSfx("hurt");
+    triggerVibration(50);
   }
 }
 
@@ -806,8 +864,9 @@ function applyMissPenalty() {
   state.stats.missed += 1;
   state.stats.missDamage += 1;
   applyDamage(1);
-  spawnEffect(canvas.width / 2, canvas.height / 2, "ПРОМАХ!", "#ff5b5b");
+  spawnEffect(GAME_WIDTH / 2, GAME_HEIGHT / 2, "ПРОМАХ!", "#ff5b5b");
   playSfx("miss");
+  triggerVibration(100);
 }
 
 function randomPowerupKind() {
@@ -883,10 +942,10 @@ function updateLevel(dt) {
 
 function drawStarfield() {
   ctx.fillStyle = palette.sky;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   ctx.fillStyle = palette.nebula;
   ctx.globalAlpha = 0.35;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = palette.stars;
@@ -1013,6 +1072,9 @@ function drawHUD() {
 }
 
 function drawScreen() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
   if (state.screenShake > 0) {
     ctx.save();
     ctx.translate(rand(-2, 2), rand(-2, 2));
@@ -1029,19 +1091,30 @@ function drawScreen() {
 
   if (state.showMiss > 0) {
     ctx.fillStyle = palette.miss;
-    ctx.fillText("ПРОМАХ!", canvas.width / 2 - 30, canvas.height / 2);
+    ctx.fillText("ПРОМАХ!", GAME_WIDTH / 2 - 30, GAME_HEIGHT / 2);
     state.showMiss -= 0.02;
   }
 
   if (state.hitFlash > 0) {
     ctx.fillStyle = palette.vignette;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     state.hitFlash -= 0.02;
   }
 
   if (state.screenShake > 0) {
     ctx.restore();
   }
+
+  displayCtx.setTransform(1, 0, 0, 1, 0, 0);
+  displayCtx.clearRect(0, 0, canvas.width, canvas.height);
+  displayCtx.imageSmoothingEnabled = false;
+  const { x, y, width, height } = state.view;
+  displayCtx.save();
+  displayCtx.beginPath();
+  displayCtx.rect(x, y, width, height);
+  displayCtx.clip();
+  displayCtx.drawImage(bufferCanvas, 0, 0, GAME_WIDTH, GAME_HEIGHT, x, y, width, height);
+  displayCtx.restore();
 }
 
 function updateStatsPanel() {
@@ -1093,6 +1166,7 @@ function renderLeaderboard() {
 }
 
 function saveResult() {
+  if (state.runSaved) return;
   const name = playerNameInput.value.trim() || "Гость";
   state.stats.playerName = name;
   const entries = loadLeaderboard();
@@ -1108,6 +1182,10 @@ function saveResult() {
   saveLeaderboard(entries);
   renderLeaderboard();
   updateStatsPanel();
+  state.runSaved = true;
+  saveResultButton.disabled = true;
+  saveResultButton.textContent = "СОХРАНЕНО";
+  playerNameInput.disabled = true;
 }
 
 function gameLoop(now) {
@@ -1131,7 +1209,7 @@ function gameLoop(now) {
     const level = levels[state.levelIndex];
     if (state.time - state.lastPower > level.powerRate) {
       state.lastPower = state.time;
-      spawnPowerup(rand(40, canvas.width - 40), -20, randomPowerupKind());
+      spawnPowerup(rand(40, GAME_WIDTH - 40), -20, randomPowerupKind());
     }
   }
 
@@ -1153,7 +1231,13 @@ function pointerToCanvas(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const x = ((clientX - rect.left) / rect.width) * canvas.width;
   const y = ((clientY - rect.top) / rect.height) * canvas.height;
-  return { x, y };
+  const view = state.view;
+  const localX = (x - view.x) / view.scale;
+  const localY = (y - view.y) / view.scale;
+  return {
+    x: clamp(localX, 0, GAME_WIDTH),
+    y: clamp(localY, 0, GAME_HEIGHT),
+  };
 }
 
 window.addEventListener("keydown", (event) => {
@@ -1201,6 +1285,14 @@ pauseButton.addEventListener("click", () => {
   togglePause();
 });
 
+finishButton.addEventListener("click", () => {
+  finishGame();
+});
+
+finishButtonPause.addEventListener("click", () => {
+  finishGame();
+});
+
 statsToggle.addEventListener("click", () => {
   statsPanel.classList.toggle("open");
 });
@@ -1218,7 +1310,18 @@ restartButton.addEventListener("click", startGame);
 
 saveResultButton.addEventListener("click", saveResult);
 
+backToMenuButton.addEventListener("click", () => {
+  state.phase = "start";
+  startOverlay.classList.remove("hidden");
+  endOverlay.classList.add("hidden");
+  pauseOverlay.classList.add("hidden");
+  if (state.audio) {
+    switchMusic("menu");
+  }
+});
+
 playerNameInput.addEventListener("keydown", (event) => {
+  if (state.runSaved) return;
   if (event.key === "Enter") {
     saveResult();
   }
@@ -1241,6 +1344,8 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setSound(state.soundOn);
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 initStarfield();
 resetPlayer();
 resetStats();

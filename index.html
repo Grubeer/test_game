@@ -3,32 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Combat PRARO</title>
+  <title>Combat PRADO</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="layout">
     <div class="cabinet">
       <div class="cabinet-frame">
+        <div class="marquee">Combat PRADO</div>
         <canvas id="game" width="420" height="720"></canvas>
         <div class="scanlines"></div>
         <div class="screen-glow"></div>
         <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
         <div class="hud">
-          <div class="hud-row">
+          <div class="hud-top">
             <div class="hud-block" id="hud-score"></div>
-            <div class="hud-block" id="hud-level"></div>
-            <button class="hud-button" id="pauseButton">ПАУЗА</button>
-            <button class="sound-toggle" id="soundToggle" aria-label="Звук">🔊</button>
+            <div class="hud-block hud-center">
+              <div id="hud-level"></div>
+              <div class="hud-weapon-mini" id="hud-weapon"></div>
+            </div>
+            <div class="hud-actions">
+              <button class="hud-button" id="pauseButton">ПАУЗА</button>
+              <button class="hud-button" id="finishButton">ВЫХОД</button>
+              <button class="sound-toggle" id="soundToggle" aria-label="Звук">🔊</button>
+            </div>
           </div>
-          <div class="hud-row">
+          <div class="hud-bottom">
             <div class="hud-block" id="hud-lives"></div>
             <div class="hud-block" id="hud-shield"></div>
-            <div class="hud-block" id="hud-weapon"></div>
           </div>
         </div>
       </div>
-      <div class="marquee">Combat PRARO</div>
       <button class="stats-toggle" id="statsToggle">СТАТИСТИКА</button>
     </div>
 
@@ -62,7 +67,7 @@
     <div class="panel start">
       <div class="title">
         <span>COMBAT</span>
-        <span>PRARO</span>
+        <span>PRADO</span>
       </div>
       <p>Управление: ← → ↑ ↓ / WASD</p>
       <p>Автоогонь включён постоянно.</p>
@@ -75,6 +80,7 @@
     <div class="panel pause">
       <h2>ПАУЗА</h2>
       <p>ESC / P / кнопка ПАУЗА</p>
+      <button id="finishButtonPause">ЗАВЕРШИТЬ ИГРУ</button>
     </div>
   </div>
 
@@ -87,6 +93,7 @@
       <div class="button-row">
         <button id="saveResult">СОХРАНИТЬ РЕЗУЛЬТАТ</button>
         <button id="restart">ИГРАТЬ СНОВА</button>
+        <button id="backToMenu">В МЕНЮ</button>
       </div>
     </div>
   </div>
