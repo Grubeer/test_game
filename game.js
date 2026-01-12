@@ -12,14 +12,38 @@ const pauseOverlay = document.getElementById("pauseOverlay");
 const endOverlay = document.getElementById("endOverlay");
 const endTitle = document.getElementById("endTitle");
 const endStats = document.getElementById("endStats");
+const playerNameInput = document.getElementById("playerName");
+const saveResultButton = document.getElementById("saveResult");
 const startButton = document.getElementById("startButton");
 const restartButton = document.getElementById("restart");
 const soundToggle = document.getElementById("soundToggle");
 const pauseButton = document.getElementById("pauseButton");
+const statsToggle = document.getElementById("statsToggle");
+const statsPanel = document.getElementById("statsPanel");
+const leaderboard = document.getElementById("leaderboard");
+
+const statPlayer = document.getElementById("stat-player");
+const statLevel = document.getElementById("stat-level");
+const statScore = document.getElementById("stat-score");
+const statTime = document.getElementById("stat-time");
+const statKills = document.getElementById("stat-kills");
+const statMissed = document.getElementById("stat-missed");
+const statMissDamage = document.getElementById("stat-miss-damage");
+const statDamage = document.getElementById("stat-damage");
+const statBoosts = document.getElementById("stat-boosts");
+const statBoostWeapon = document.getElementById("stat-boost-weapon");
+const statBoostShield = document.getElementById("stat-boost-shield");
+const statBoostHeal = document.getElementById("stat-boost-heal");
+const statBoostOther = document.getElementById("stat-boost-other");
+const statWeaponMax = document.getElementById("stat-weapon-max");
+const statCombo = document.getElementById("stat-combo");
+const statBestCombo = document.getElementById("stat-best-combo");
+const statAccuracy = document.getElementById("stat-accuracy");
 
 const keys = new Set();
 const touches = new Map();
 let lastFrame = performance.now();
+let statsTimer = 0;
 
 const palette = {
   sky: "#04060f",
@@ -189,7 +213,23 @@ const state = {
   audio: null,
   musicTimer: null,
   currentTrack: null,
-  paused: false,
+  stats: {
+    playerName: "Гость",
+    kills: 0,
+    missed: 0,
+    missDamage: 0,
+    damageTaken: 0,
+    boosts: 0,
+    boostWeapon: 0,
+    boostShield: 0,
+    boostHeal: 0,
+    boostOther: 0,
+    weaponMax: 1,
+    combo: 0,
+    bestCombo: 0,
+    shots: 0,
+    hits: 0,
+  },
 };
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -209,6 +249,26 @@ function initStarfield() {
     size: 1,
     speed: rand(10, 25),
   }));
+}
+
+function resetStats() {
+  state.stats = {
+    playerName: state.stats.playerName || "Гость",
+    kills: 0,
+    missed: 0,
+    missDamage: 0,
+    damageTaken: 0,
+    boosts: 0,
+    boostWeapon: 0,
+    boostShield: 0,
+    boostHeal: 0,
+    boostOther: 0,
+    weaponMax: 1,
+    combo: 0,
+    bestCombo: 0,
+    shots: 0,
+    hits: 0,
+  };
 }
 
 function resetPlayer() {
@@ -257,13 +317,13 @@ function hideLevelBanner() {
 
 function startGame() {
   state.phase = "play";
-  state.paused = false;
   state.score = 0;
   state.levelIndex = 0;
   state.time = 0;
   startOverlay.classList.add("hidden");
   endOverlay.classList.add("hidden");
   pauseOverlay.classList.add("hidden");
+  resetStats();
   resetLevel();
   initAudio();
   switchMusic("early");
@@ -272,7 +332,7 @@ function startGame() {
 function endGame(win) {
   state.phase = "end";
   endOverlay.classList.remove("hidden");
-  endTitle.textContent = win ? "ПОБЕДА" : "ПОРАЖЕНИЕ";
+  endTitle.textContent = win ? "ПОБЕДА!" : "ИГРА ОКОНЧЕНА";
   endStats.textContent = `ОЧКИ: ${state.score} · ВРЕМЯ: ${state.time.toFixed(1)}с`;
   playSfx(win ? "win" : "lose");
 }
@@ -441,6 +501,7 @@ function spawnPlayerBullet(angleOffset = 0, pierce = 0) {
     angle: -Math.PI / 2 + angleOffset,
     pierce,
   });
+  state.stats.shots += 1;
 }
 
 function spawnEnemyBullet(enemy, angleOffset = 0, speedBoost = 0) {
@@ -663,6 +724,7 @@ function handleCollisions() {
         enemy.hp -= 1;
         spawnEffect(enemy.x, enemy.y, "ПОПАДАНИЕ", "#ffe66d");
         playSfx("hit");
+        state.stats.hits += 1;
         if (bullet.pierce > 0) {
           bullet.pierce -= 1;
         } else {
@@ -670,6 +732,9 @@ function handleCollisions() {
         }
         if (enemy.hp <= 0) {
           state.score += enemy.type.armored ? 220 : 150;
+          state.stats.kills += 1;
+          state.stats.combo += 1;
+          state.stats.bestCombo = Math.max(state.stats.bestCombo, state.stats.combo);
           state.screenShake = 6;
           spawnEffect(enemy.x, enemy.y, "+ОЧКИ", "#9aff6c");
           spawnExplosion(enemy.x, enemy.y, "#ff9b4b");
@@ -717,6 +782,8 @@ function applyDamage(amount) {
     playSfx("shield");
   } else {
     state.player.hp = Math.max(0, state.player.hp - amount);
+    state.stats.damageTaken += amount;
+    state.stats.combo = 0;
     state.player.invuln = 0.8;
     state.screenShake = 8;
     state.hitFlash = 0.25;
@@ -729,6 +796,8 @@ function applyDamage(amount) {
 
 function applyMissPenalty() {
   state.showMiss = 0.9;
+  state.stats.missed += 1;
+  state.stats.missDamage += 1;
   applyDamage(1);
   spawnEffect(canvas.width / 2, canvas.height / 2, "ПРОМАХ!", "#ff5b5b");
   playSfx("miss");
@@ -740,29 +809,36 @@ function randomPowerupKind() {
 }
 
 function collectPowerup(kind) {
+  state.stats.boosts += 1;
   if (kind === "weapon") {
     state.player.weaponLevel = Math.min(weaponLevels.length - 1, state.player.weaponLevel + 1);
+    state.stats.weaponMax = Math.max(state.stats.weaponMax, state.player.weaponLevel + 1);
+    state.stats.boostWeapon += 1;
     spawnEffect(state.player.x, state.player.y - 20, "ОРУЖИЕ +", "#ffd166");
     hudWeapon.classList.add("glow");
     setTimeout(() => hudWeapon.classList.remove("glow"), 600);
     playSfx("weapon");
   } else if (kind === "shield") {
     state.player.shield = Math.min(3, state.player.shield + 1);
+    state.stats.boostShield += 1;
     spawnEffect(state.player.x, state.player.y - 20, "ЩИТ +", "#6ce1ff");
     hudShield.classList.add("glow");
     setTimeout(() => hudShield.classList.remove("glow"), 600);
     playSfx("shield");
   } else if (kind === "heal") {
     state.player.hp = Math.min(state.player.maxHp, state.player.hp + 1);
+    state.stats.boostHeal += 1;
     spawnEffect(state.player.x, state.player.y - 20, "ЗДОРОВЬЕ +", "#9aff6c");
     hudLives.classList.add("glow");
     setTimeout(() => hudLives.classList.remove("glow"), 600);
     playSfx("heal");
   } else if (kind === "score") {
     state.score += 200;
+    state.stats.boostOther += 1;
     spawnEffect(state.player.x, state.player.y - 20, "БОНУС", "#ffd166");
     playSfx("bonus");
   } else if (kind === "slow") {
+    state.stats.boostOther += 1;
     state.enemies.forEach((enemy) => {
       enemy.speed *= 0.6;
     });
@@ -951,6 +1027,72 @@ function drawScreen() {
   }
 }
 
+function updateStatsPanel() {
+  const accuracy = state.stats.shots === 0 ? 0 : Math.round((state.stats.hits / state.stats.shots) * 100);
+  statPlayer.textContent = state.stats.playerName || "Гость";
+  statLevel.textContent = String(levels[state.levelIndex].level);
+  statScore.textContent = String(state.score);
+  statTime.textContent = `${state.time.toFixed(1)}с`;
+  statKills.textContent = String(state.stats.kills);
+  statMissed.textContent = String(state.stats.missed);
+  statMissDamage.textContent = String(state.stats.missDamage);
+  statDamage.textContent = String(state.stats.damageTaken);
+  statBoosts.textContent = String(state.stats.boosts);
+  statBoostWeapon.textContent = String(state.stats.boostWeapon);
+  statBoostShield.textContent = String(state.stats.boostShield);
+  statBoostHeal.textContent = String(state.stats.boostHeal);
+  statBoostOther.textContent = String(state.stats.boostOther);
+  statWeaponMax.textContent = String(state.stats.weaponMax);
+  statCombo.textContent = String(state.stats.combo);
+  statBestCombo.textContent = String(state.stats.bestCombo);
+  statAccuracy.textContent = `${accuracy}%`;
+}
+
+function loadLeaderboard() {
+  const data = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  return Array.isArray(data) ? data : [];
+}
+
+function saveLeaderboard(entries) {
+  localStorage.setItem("leaderboard", JSON.stringify(entries.slice(0, 10)));
+}
+
+function renderLeaderboard() {
+  const entries = loadLeaderboard();
+  leaderboard.innerHTML = entries
+    .map(
+      (entry) => `
+        <div class="leaderboard-row">
+          <span>${entry.name}</span>
+          <span>${entry.score} · ${entry.level} ур.</span>
+        </div>
+        <div class="leaderboard-row">
+          <span>${entry.date}</span>
+          <span>${entry.time.toFixed(1)}с</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function saveResult() {
+  const name = playerNameInput.value.trim() || "Гость";
+  state.stats.playerName = name;
+  const entries = loadLeaderboard();
+  const newEntry = {
+    name,
+    score: state.score,
+    level: levels[state.levelIndex].level,
+    time: state.time,
+    date: new Date().toLocaleString("ru-RU"),
+  };
+  entries.push(newEntry);
+  entries.sort((a, b) => b.score - a.score);
+  saveLeaderboard(entries);
+  renderLeaderboard();
+  updateStatsPanel();
+}
+
 function gameLoop(now) {
   const dt = Math.min((now - lastFrame) / 1000, 0.05);
   lastFrame = now;
@@ -979,6 +1121,12 @@ function gameLoop(now) {
   drawScreen();
   if (state.phase !== "start") {
     drawHUD();
+  }
+
+  statsTimer += dt;
+  if (statsTimer >= 0.3) {
+    updateStatsPanel();
+    statsTimer = 0;
   }
 
   requestAnimationFrame(gameLoop);
@@ -1036,8 +1184,24 @@ pauseButton.addEventListener("click", () => {
   togglePause();
 });
 
-startButton.addEventListener("click", startGame);
+statsToggle.addEventListener("click", () => {
+  statsPanel.classList.toggle("open");
+});
+
+startButton.addEventListener("click", () => {
+  startGame();
+  playerNameInput.value = state.stats.playerName || "";
+});
+
 restartButton.addEventListener("click", startGame);
+
+saveResultButton.addEventListener("click", saveResult);
+
+playerNameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    saveResult();
+  }
+});
 
 document.addEventListener(
   "touchmove",
@@ -1058,4 +1222,7 @@ document.addEventListener("visibilitychange", () => {
 setSound(state.soundOn);
 initStarfield();
 resetPlayer();
+resetStats();
+renderLeaderboard();
+updateStatsPanel();
 requestAnimationFrame(gameLoop);
