@@ -187,33 +187,64 @@ const weaponLevels = [
   { name: "МК-IV", shots: 4, spread: 0.24, pierce: 1 },
 ];
 
-const musicTracks = {
-  menu: {
-    tempo: 240,
-    melody: [392, 330, 349, 392, 440, 392, 349, 330],
-    bass: [131, 131, 147, 165, 131, 131, 147, 165],
-  },
-  levelA: {
-    tempo: 220,
-    melody: [330, 392, 440, 392, 330, 294, 330, 392],
-    bass: [110, 110, 123, 131, 110, 110, 123, 131],
-  },
-  levelB: {
-    tempo: 210,
-    melody: [349, 392, 466, 392, 349, 330, 349, 392],
-    bass: [123, 123, 139, 147, 123, 123, 139, 147],
-  },
-  levelC: {
-    tempo: 200,
-    melody: [440, 494, 523, 494, 440, 392, 440, 494],
-    bass: [147, 147, 165, 175, 147, 147, 165, 175],
-  },
-  boss: {
-    tempo: 180,
-    melody: [262, 294, 330, 294, 262, 247, 262, 294],
-    bass: [98, 110, 123, 110, 98, 92, 98, 110],
-  },
-};
+const musicTracks = buildMusicTracks();
+
+function buildMusicTracks() {
+  // Autotracker-inspired procedural music generator.
+  return {
+    menu: createAutoTrack({ seed: 0x4d5054, tempo: 240, root: 57, mood: "bright" }),
+    levelA: createAutoTrack({ seed: 0x4c564c, tempo: 220, root: 55, mood: "adventure" }),
+    levelB: createAutoTrack({ seed: 0x4c5642, tempo: 210, root: 53, mood: "adventure" }),
+    levelC: createAutoTrack({ seed: 0x4c5643, tempo: 200, root: 52, mood: "mystic" }),
+    boss: createAutoTrack({ seed: 0x424f5353, tempo: 180, root: 45, mood: "tense" }),
+  };
+}
+
+function createAutoTrack({ seed, tempo, root, mood }) {
+  const rng = mulberry32(seed);
+  const length = 8;
+  const scale = pickScale(mood);
+  const melody = [];
+  const bass = [];
+
+  for (let i = 0; i < length; i += 1) {
+    const noteStep = scale[Math.floor(rng() * scale.length)];
+    const melodyNote = root + 12 + noteStep + (rng() < 0.2 ? 12 : 0);
+    melody.push(midiToFreq(melodyNote));
+
+    const bassStep = scale[Math.floor(rng() * scale.length)];
+    const bassNote = root - 12 + bassStep;
+    bass.push(midiToFreq(bassNote));
+  }
+
+  const tempoVariance = 0.9 + rng() * 0.2;
+  return {
+    tempo: Math.floor(tempo * tempoVariance),
+    melody,
+    bass,
+  };
+}
+
+function pickScale(mood) {
+  if (mood === "tense") return [0, 1, 3, 5, 6, 8, 10];
+  if (mood === "mystic") return [0, 2, 3, 5, 7, 9, 10];
+  if (mood === "bright") return [0, 2, 4, 7, 9, 12];
+  return [0, 2, 4, 5, 7, 9, 11];
+}
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function mulberry32(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 const difficultySettings = {
   easy: { spawn: 1.1, speed: 0.95, power: 0.9, boss: 0.9 },
