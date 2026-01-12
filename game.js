@@ -81,48 +81,84 @@ const palette = {
 const playerSkins = [
   {
     name: "Скаут",
-    color: "#7df9ff",
-    accent: "#2bffae",
+    color: "#b9f1ff",
+    accent: "#6ad8ff",
+    highlight: "#ffffff",
+    cockpit: "#32c97c",
+    flame: "#ffb347",
+    tier: 1,
+    width: 30,
+    height: 44,
     speed: 180,
     fireRate: 2.2,
     maxHp: 4,
   },
   {
     name: "Фалькон",
-    color: "#7fffb6",
-    accent: "#ffd166",
+    color: "#3fd34d",
+    accent: "#a7ff6a",
+    highlight: "#f5ffd8",
+    cockpit: "#1a6a2a",
+    flame: "#ff9a3c",
+    tier: 2,
+    width: 32,
+    height: 46,
     speed: 190,
     fireRate: 2.6,
     maxHp: 4,
   },
   {
     name: "Раптор",
-    color: "#5ecbff",
-    accent: "#ff6b6b",
+    color: "#2b7de6",
+    accent: "#7fd3ff",
+    highlight: "#e8f7ff",
+    cockpit: "#1a4f8f",
+    flame: "#ffb347",
+    tier: 3,
+    width: 34,
+    height: 48,
     speed: 200,
     fireRate: 3,
     maxHp: 5,
   },
   {
     name: "Вайпер",
-    color: "#b88bff",
-    accent: "#2bffae",
+    color: "#3b3f4a",
+    accent: "#f2b942",
+    highlight: "#8fd6ff",
+    cockpit: "#1d232e",
+    flame: "#ffb347",
+    tier: 4,
+    width: 36,
+    height: 50,
     speed: 210,
     fireRate: 3.4,
     maxHp: 5,
   },
   {
     name: "Фантом",
-    color: "#ff7bd6",
-    accent: "#ffe66d",
+    color: "#d93b34",
+    accent: "#ffffff",
+    highlight: "#ffd2d2",
+    cockpit: "#5f0f14",
+    flame: "#ffb347",
+    tier: 5,
+    width: 38,
+    height: 52,
     speed: 225,
     fireRate: 3.8,
     maxHp: 6,
   },
   {
     name: "Нова",
-    color: "#fff1a8",
-    accent: "#7df9ff",
+    color: "#5e6e87",
+    accent: "#c8d4e6",
+    highlight: "#ffffff",
+    cockpit: "#2b3a52",
+    flame: "#55d7ff",
+    tier: 6,
+    width: 40,
+    height: 54,
     speed: 240,
     fireRate: 4.2,
     maxHp: 6,
@@ -433,8 +469,8 @@ function resetPlayer() {
   state.player = {
     x: GAME_WIDTH / 2,
     y: GAME_HEIGHT * 0.75,
-    width: 30,
-    height: 44,
+    width: skin.width,
+    height: skin.height,
     speed: skin.speed,
     fireRate: skin.fireRate,
     hp: skin.maxHp,
@@ -957,16 +993,118 @@ function updateBoss(dt) {
   bossHealthFill.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
 }
 
+function drawPixelBoss({ x, y, kind }) {
+  const unit = 2;
+  const drawBlocks = (blocks, color) => {
+    if (!blocks.length) return;
+    ctx.fillStyle = color;
+    blocks.forEach(([bx, by, bw, bh]) => {
+      ctx.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
+    });
+  };
+
+  const styleMap = {
+    0: {
+      colors: {
+        body: "#3fd34d",
+        accent: "#8dff5c",
+        core: "#ff4040",
+        metal: "#2b3c54",
+        glow: "#ffffff",
+      },
+      body: [
+        [-18, -10, 36, 14],
+        [-14, 4, 28, 10],
+        [-6, -16, 12, 6],
+      ],
+      arms: [
+        [-24, -6, 8, 8],
+        [16, -6, 8, 8],
+        [-26, 2, 6, 8],
+        [20, 2, 6, 8],
+      ],
+      core: [[-4, -8, 8, 8]],
+      accents: [
+        [-10, -6, 20, 3],
+        [-12, 6, 24, 3],
+      ],
+      glow: [[-2, -6, 4, 2]],
+    },
+    1: {
+      colors: {
+        body: "#8c92a1",
+        accent: "#c8d4e6",
+        core: "#ff6b6b",
+        metal: "#3b3f4a",
+        glow: "#ffffff",
+      },
+      body: [
+        [-18, -9, 36, 13],
+        [-16, 4, 32, 10],
+        [-8, -15, 16, 6],
+      ],
+      arms: [
+        [-26, -6, 8, 8],
+        [18, -6, 8, 8],
+        [-28, 2, 6, 8],
+        [22, 2, 6, 8],
+      ],
+      core: [[-5, -7, 10, 8]],
+      accents: [
+        [-12, -5, 24, 3],
+        [-14, 6, 28, 3],
+      ],
+      glow: [[-2, -6, 4, 2]],
+    },
+    2: {
+      colors: {
+        body: "#d23b32",
+        accent: "#ff9f3c",
+        core: "#ffd166",
+        metal: "#4a1f23",
+        glow: "#ffffff",
+      },
+      body: [
+        [-18, -9, 36, 13],
+        [-16, 4, 32, 10],
+        [-8, -16, 16, 7],
+      ],
+      arms: [
+        [-24, -6, 8, 8],
+        [16, -6, 8, 8],
+        [-28, 2, 8, 8],
+        [20, 2, 8, 8],
+      ],
+      core: [[-5, -7, 10, 8]],
+      accents: [
+        [-12, -5, 24, 3],
+        [-14, 6, 28, 3],
+      ],
+      glow: [[-2, -6, 4, 2]],
+    },
+  };
+
+  const style = styleMap[kind] || styleMap[0];
+  drawBlocks(style.body, style.colors.body);
+  drawBlocks(style.arms, style.colors.accent);
+  drawBlocks(style.accents, style.colors.accent);
+  drawBlocks(style.core, style.colors.core);
+  drawBlocks([[-6, -2, 12, 6]], style.colors.metal);
+  drawBlocks(style.glow, style.colors.glow);
+  drawBlocks(
+    [
+      [-14, 12, 6, 6],
+      [8, 12, 6, 6],
+      [-2, 12, 4, 6],
+    ],
+    style.colors.accent
+  );
+}
+
 function drawBoss() {
   const boss = state.boss;
   if (!boss) return;
-  ctx.fillStyle = "#7b4bff";
-  ctx.fillRect(boss.x - boss.width / 2, boss.y - boss.height / 2, boss.width, boss.height);
-  ctx.fillStyle = "#ffb3ff";
-  ctx.fillRect(boss.x - boss.width / 2 + 6, boss.y - boss.height / 2 + 6, boss.width - 12, 6);
-  ctx.fillRect(boss.x - 10, boss.y + boss.height / 2 - 6, 20, 6);
-  ctx.fillStyle = "#1a0f2a";
-  ctx.fillRect(boss.x - 12, boss.y - 6, 24, 12);
+  drawPixelBoss({ x: boss.x, y: boss.y, kind: boss.kind });
 }
 
 function fireEnemy(enemy) {
@@ -1236,24 +1374,204 @@ function drawStarfield() {
   ctx.globalAlpha = 1;
 }
 
+function drawPixelShip({ x, y, skin }) {
+  const unit = 2;
+  const drawBlocks = (blocks, color) => {
+    if (!blocks.length) return;
+    ctx.fillStyle = color;
+    blocks.forEach(([bx, by, bw, bh]) => {
+      ctx.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
+    });
+  };
+
+  const styleMap = {
+    1: {
+      body: [
+        [-2, -10, 4, 16],
+        [-1, -12, 2, 3],
+        [-7, -4, 14, 5],
+        [-5, 1, 4, 6],
+        [1, 1, 4, 6],
+        [-1, 6, 2, 6],
+      ],
+      accent: [
+        [-1, -7, 2, 5],
+        [-5, -2, 3, 2],
+        [2, -2, 3, 2],
+      ],
+      highlight: [
+        [-1, -12, 2, 1],
+        [-6, -3, 2, 1],
+        [4, -3, 2, 1],
+      ],
+      cockpit: [[-1, -5, 2, 3]],
+      flame: [
+        [-4, 10, 2, 3],
+        [2, 10, 2, 3],
+      ],
+    },
+    2: {
+      body: [
+        [-3, -12, 6, 18],
+        [-1, -14, 2, 3],
+        [-8, -5, 16, 6],
+        [-7, 1, 5, 7],
+        [2, 1, 5, 7],
+        [-2, 6, 4, 7],
+      ],
+      accent: [
+        [-1, -8, 2, 6],
+        [-6, -3, 3, 2],
+        [3, -3, 3, 2],
+      ],
+      highlight: [
+        [-1, -13, 2, 1],
+        [-7, -4, 2, 1],
+        [5, -4, 2, 1],
+      ],
+      cockpit: [[-1, -6, 2, 4]],
+      flame: [
+        [-6, 11, 2, 3],
+        [4, 11, 2, 3],
+      ],
+    },
+    3: {
+      body: [
+        [-3, -13, 6, 18],
+        [-1, -15, 2, 3],
+        [-9, -6, 18, 6],
+        [-8, 0, 6, 7],
+        [2, 0, 6, 7],
+        [-2, 6, 4, 8],
+        [-1, -10, 2, 3],
+      ],
+      accent: [
+        [-1, -9, 2, 6],
+        [-7, -4, 3, 2],
+        [4, -4, 3, 2],
+        [-3, 1, 6, 2],
+      ],
+      highlight: [
+        [-1, -14, 2, 1],
+        [-8, -5, 2, 1],
+        [6, -5, 2, 1],
+      ],
+      cockpit: [[-1, -7, 2, 4]],
+      flame: [
+        [-7, 12, 2, 3],
+        [5, 12, 2, 3],
+        [-1, 12, 2, 3],
+      ],
+    },
+    4: {
+      body: [
+        [-4, -14, 8, 18],
+        [-1, -16, 2, 3],
+        [-10, -7, 20, 6],
+        [-9, -1, 7, 8],
+        [2, -1, 7, 8],
+        [-3, 6, 6, 8],
+        [-2, -11, 4, 4],
+        [-6, -10, 2, 4],
+        [4, -10, 2, 4],
+      ],
+      accent: [
+        [-1, -10, 2, 6],
+        [-8, -5, 3, 2],
+        [5, -5, 3, 2],
+        [-4, 1, 8, 2],
+      ],
+      highlight: [
+        [-1, -15, 2, 1],
+        [-9, -6, 2, 1],
+        [7, -6, 2, 1],
+      ],
+      cockpit: [[-1, -8, 2, 4]],
+      flame: [
+        [-8, 13, 2, 3],
+        [6, 13, 2, 3],
+        [-3, 13, 6, 3],
+      ],
+    },
+    5: {
+      body: [
+        [-4, -15, 8, 19],
+        [-1, -17, 2, 3],
+        [-11, -8, 22, 6],
+        [-10, -2, 8, 8],
+        [2, -2, 8, 8],
+        [-4, 7, 8, 8],
+        [-2, -12, 4, 4],
+        [-7, -11, 2, 4],
+        [5, -11, 2, 4],
+      ],
+      accent: [
+        [-1, -11, 2, 6],
+        [-9, -6, 3, 2],
+        [6, -6, 3, 2],
+        [-4, 1, 8, 2],
+        [-6, 3, 12, 2],
+      ],
+      highlight: [
+        [-1, -16, 2, 1],
+        [-10, -7, 2, 1],
+        [8, -7, 2, 1],
+      ],
+      cockpit: [[-1, -9, 2, 4]],
+      flame: [
+        [-9, 14, 2, 3],
+        [7, 14, 2, 3],
+        [-4, 14, 8, 3],
+      ],
+    },
+    6: {
+      body: [
+        [-5, -16, 10, 20],
+        [-1, -18, 2, 3],
+        [-12, -9, 24, 6],
+        [-11, -3, 9, 9],
+        [2, -3, 9, 9],
+        [-4, 8, 8, 8],
+        [-2, -13, 4, 4],
+        [-8, -12, 2, 4],
+        [6, -12, 2, 4],
+        [-7, -7, 2, 5],
+        [5, -7, 2, 5],
+      ],
+      accent: [
+        [-1, -12, 2, 6],
+        [-10, -7, 3, 2],
+        [7, -7, 3, 2],
+        [-5, 1, 10, 2],
+        [-7, 3, 14, 2],
+      ],
+      highlight: [
+        [-1, -17, 2, 1],
+        [-11, -8, 2, 1],
+        [9, -8, 2, 1],
+      ],
+      cockpit: [[-1, -10, 2, 4]],
+      flame: [
+        [-10, 15, 2, 3],
+        [8, 15, 2, 3],
+        [-5, 15, 10, 3],
+      ],
+    },
+  };
+
+  const style = styleMap[skin.tier] || styleMap[1];
+  drawBlocks(style.body, skin.color);
+  drawBlocks(style.accent, skin.accent);
+  drawBlocks(style.highlight, skin.highlight);
+  drawBlocks(style.cockpit, skin.cockpit);
+  drawBlocks(style.flame, skin.flame);
+}
+
 function drawPlayer() {
   const { x, y, width, height, skin, invuln, shield } = state.player;
   if (invuln > 0 && Math.floor(invuln * 10) % 2 === 0) return;
 
-  ctx.fillStyle = skin.color;
-  ctx.fillRect(x - width / 2, y - height / 2, width, height);
-  ctx.fillStyle = skin.accent;
-  ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 8);
-  ctx.fillRect(x - 12, y - height / 2 - 8, 24, 8);
-  ctx.fillRect(x - width / 2 - 10, y - 6, 10, 18);
-  ctx.fillRect(x + width / 2, y - 6, 10, 18);
-  ctx.fillRect(x - 6, y - height / 2 - 12, 12, 4);
-  ctx.fillStyle = "#09111f";
-  ctx.fillRect(x - 6, y - height / 2 + 18, 12, 8);
-  ctx.fillStyle = skin.accent;
-  ctx.fillRect(x - width / 2 + 6, y + height / 2 - 6, width - 12, 6);
-  ctx.fillRect(x - width / 2 + 2, y + height / 2, 8, 6);
-  ctx.fillRect(x + width / 2 - 10, y + height / 2, 8, 6);
+  drawPixelShip({ x, y, skin });
 
   if (shield > 0) {
     ctx.strokeStyle = palette.shield;
@@ -1264,23 +1582,149 @@ function drawPlayer() {
   }
 }
 
+function drawPixelEnemy({ x, y, type }) {
+  const unit = 2;
+  const drawBlocks = (blocks, color) => {
+    if (!blocks.length) return;
+    ctx.fillStyle = color;
+    blocks.forEach(([bx, by, bw, bh]) => {
+      ctx.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
+    });
+  };
+
+  const styleMap = {
+    легкий: {
+      colors: {
+        body: "#4de56e",
+        accent: "#2bbf58",
+        eye: "#ff4040",
+        highlight: "#ffffff",
+      },
+      body: [
+        [-4, -5, 8, 6],
+        [-6, 1, 12, 4],
+        [-7, 4, 14, 3],
+      ],
+      accent: [
+        [-2, -3, 4, 2],
+        [-4, 2, 8, 2],
+      ],
+      eye: [[-1, -2, 2, 2]],
+      extra: [
+        [-6, 7, 2, 2],
+        [-2, 7, 2, 2],
+        [2, 7, 2, 2],
+        [6, 7, 2, 2],
+      ],
+    },
+    зигзаг: {
+      colors: {
+        body: "#7fc8ff",
+        accent: "#4a8bff",
+        eye: "#ff4040",
+        highlight: "#e7f3ff",
+      },
+      body: [
+        [-5, -6, 10, 7],
+        [-7, 1, 14, 5],
+        [-4, 6, 8, 2],
+      ],
+      accent: [
+        [-2, -4, 4, 3],
+        [-6, 2, 3, 2],
+        [3, 2, 3, 2],
+      ],
+      eye: [[-1, -2, 2, 2]],
+      extra: [
+        [-9, 2, 2, 2],
+        [7, 2, 2, 2],
+      ],
+    },
+    броня: {
+      colors: {
+        body: "#b6c4d9",
+        accent: "#7a8796",
+        eye: "#ff5b5b",
+        highlight: "#ffffff",
+      },
+      body: [
+        [-6, -6, 12, 8],
+        [-8, 2, 16, 6],
+        [-4, 8, 8, 2],
+      ],
+      accent: [
+        [-3, -4, 6, 3],
+        [-7, 3, 4, 2],
+        [3, 3, 4, 2],
+      ],
+      eye: [[-1, -2, 2, 2]],
+      extra: [
+        [-9, 1, 2, 4],
+        [7, 1, 2, 4],
+      ],
+    },
+    веер: {
+      colors: {
+        body: "#c06cff",
+        accent: "#ff6adf",
+        eye: "#ff4040",
+        highlight: "#ffd8ff",
+      },
+      body: [
+        [-5, -6, 10, 7],
+        [-7, 1, 14, 5],
+        [-6, 6, 12, 2],
+      ],
+      accent: [
+        [-2, -4, 4, 3],
+        [-7, 3, 4, 2],
+        [3, 3, 4, 2],
+      ],
+      eye: [[-1, -2, 2, 2]],
+      extra: [
+        [-8, 7, 4, 2],
+        [-2, 7, 4, 2],
+        [4, 7, 4, 2],
+      ],
+    },
+    быстрый: {
+      colors: {
+        body: "#ff5a4f",
+        accent: "#ff9f3c",
+        eye: "#fff1a8",
+        highlight: "#ffffff",
+      },
+      body: [
+        [-6, -6, 12, 7],
+        [-8, 1, 16, 5],
+        [-6, 6, 12, 2],
+      ],
+      accent: [
+        [-2, -4, 4, 3],
+        [-7, 3, 4, 2],
+        [3, 3, 4, 2],
+      ],
+      eye: [[-1, -2, 2, 2]],
+      extra: [
+        [-9, 2, 2, 2],
+        [7, 2, 2, 2],
+        [-6, 7, 3, 2],
+        [3, 7, 3, 2],
+      ],
+    },
+  };
+
+  const style = styleMap[type.id] || styleMap.легкий;
+  drawBlocks(style.body, style.colors.body);
+  drawBlocks(style.accent, style.colors.accent);
+  drawBlocks(style.extra, style.colors.accent);
+  drawBlocks(style.eye, style.colors.eye);
+  drawBlocks([[-1, -3, 2, 1]], style.colors.highlight);
+}
+
 function drawEnemy(enemy) {
   const { x, y, width, height, type, telegraph } = enemy;
-  ctx.fillStyle = palette.enemy;
-  ctx.fillRect(x - width / 2, y - height / 2, width, height);
-  ctx.fillStyle = palette.enemyAccent;
-  ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 6);
-  ctx.fillRect(x - 6, y + height / 2 - 6, 12, 6);
-  ctx.fillRect(x - width / 2 - 8, y - 4, 8, 12);
-  ctx.fillRect(x + width / 2, y - 4, 8, 12);
-  ctx.fillRect(x - 4, y - height / 2 - 6, 8, 4);
-
-  if (type.armored) {
-    ctx.fillStyle = "#3d2a2a";
-    ctx.fillRect(x - 6, y - 6, 12, 12);
-    ctx.fillRect(x - width / 2 + 2, y - 2, 6, 10);
-    ctx.fillRect(x + width / 2 - 8, y - 2, 6, 10);
-  }
+  drawPixelEnemy({ x, y, type });
 
   if (telegraph > 0) {
     ctx.strokeStyle = "#ffe66d";
