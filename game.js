@@ -2,8 +2,8 @@ const canvas = document.getElementById("game");
 const displayCtx = canvas.getContext("2d");
 const bufferCanvas = document.createElement("canvas");
 const ctx = bufferCanvas.getContext("2d");
-const GAME_WIDTH = 260;
-const GAME_HEIGHT = 520;
+const GAME_WIDTH = 300;
+const GAME_HEIGHT = 600;
 bufferCanvas.width = GAME_WIDTH;
 bufferCanvas.height = GAME_HEIGHT;
 displayCtx.imageSmoothingEnabled = false;
@@ -36,6 +36,7 @@ const finishButtonPause = document.getElementById("finishButtonPause");
 const statsToggle = document.getElementById("statsToggle");
 const statsPanel = document.getElementById("statsPanel");
 const leaderboard = document.getElementById("leaderboard");
+const difficultyButtons = document.querySelectorAll(".difficulty-button");
 
 const statPlayer = document.getElementById("stat-player");
 const statLevel = document.getElementById("stat-level");
@@ -214,6 +215,13 @@ const musicTracks = {
   },
 };
 
+const difficultySettings = {
+  easy: { spawn: 1.1, speed: 0.95, power: 0.9, boss: 0.9 },
+  medium: { spawn: 1, speed: 1, power: 1, boss: 1 },
+  hard: { spawn: 0.92, speed: 1.08, power: 1.1, boss: 1.1 },
+  insane: { spawn: 0.85, speed: 1.16, power: 1.2, boss: 1.2 },
+};
+
 const state = {
   phase: "start",
   levelIndex: 0,
@@ -244,6 +252,7 @@ const state = {
   boss: null,
   bossBannerTimer: 0,
   lastBossName: null,
+  difficulty: "medium",
   view: {
     x: 0,
     y: 0,
@@ -354,6 +363,30 @@ function getLevelTrack(level) {
   return bucket === 0 ? "levelA" : bucket === 1 ? "levelB" : "levelC";
 }
 
+function getDifficulty() {
+  return difficultySettings[state.difficulty] || difficultySettings.medium;
+}
+
+function getLevelConfig() {
+  const base = levels[state.levelIndex];
+  const diff = getDifficulty();
+  return {
+    ...base,
+    spawnRate: base.spawnRate * 0.94 * diff.spawn,
+    enemySpeed: base.enemySpeed * 1.06 * diff.speed,
+    powerRate: base.powerRate * diff.power,
+    bossScale: diff.boss,
+  };
+}
+
+function setDifficulty(value) {
+  if (!difficultySettings[value]) return;
+  state.difficulty = value;
+  difficultyButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.difficulty === value);
+  });
+}
+
 function pickBossName() {
   const pool = bossNamesBase.concat(bossNamesExtra);
   let name = pool[Math.floor(rand(0, pool.length))];
@@ -407,8 +440,11 @@ function resetLevel() {
 }
 
 function startBossFight() {
-  const bossIndex = Math.floor(levels[state.levelIndex].level / 5);
-  const maxHp = Math.floor(60 * Math.pow(1.35, bossIndex));
+  const level = levels[state.levelIndex].level;
+  const bossIndex = Math.floor(level / 5);
+  const diff = getDifficulty();
+  const maxHp = Math.floor(70 * Math.pow(1.32, bossIndex) * diff.boss);
+  const kind = bossIndex % 3;
   state.boss = {
     name: pickBossName(),
     x: GAME_WIDTH / 2,
@@ -420,6 +456,8 @@ function startBossFight() {
     phase: 1,
     entering: true,
     attackTimer: 2,
+    specialTimer: 4,
+    kind,
     moveDir: 1,
     minionTimer: 6,
   };
@@ -623,7 +661,7 @@ function switchMusic(trackKey) {
 }
 
 function spawnEnemy() {
-  const level = levels[state.levelIndex];
+  const level = getLevelConfig();
   let typePool = [enemyTypes[0]];
   if (state.levelIndex >= 1) typePool = typePool.concat(enemyTypes[1]);
   if (state.levelIndex >= 2) typePool = typePool.concat(enemyTypes[4]);
@@ -782,7 +820,7 @@ function updateEnemies(dt) {
   if (state.boss) {
     return;
   }
-  const level = levels[state.levelIndex];
+  const level = getLevelConfig();
   if (state.time - state.lastEnemy > level.spawnRate) {
     state.lastEnemy = state.time;
     spawnEnemy();
@@ -1417,7 +1455,7 @@ function gameLoop(now) {
     }
 
     if (!state.boss) {
-      const level = levels[state.levelIndex];
+      const level = getLevelConfig();
       if (state.time - state.lastPower > level.powerRate) {
         state.lastPower = state.time;
         spawnPowerup(rand(40, GAME_WIDTH - 40), -20, randomPowerupKind());
@@ -1509,6 +1547,13 @@ statsToggle.addEventListener("click", () => {
   statsPanel.classList.toggle("open");
 });
 
+difficultyButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (state.phase !== "start") return;
+    setDifficulty(button.dataset.difficulty);
+  });
+});
+
 pauseOverlay.addEventListener("click", () => {
   togglePause();
 });
@@ -1556,6 +1601,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setSound(state.soundOn);
+setDifficulty(state.difficulty);
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 initStarfield();

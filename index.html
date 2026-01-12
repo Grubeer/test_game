@@ -45,6 +45,7 @@
     </div>
 
     <aside class="stats-panel" id="statsPanel">
+      <div class="panel-logo">CosmoPrado</div>
       <div class="panel-header">ЛИЧНАЯ СТАТИСТИКА</div>
       <div class="panel-body">
         <div class="stat-row"><span>Игрок:</span><span id="stat-player">Гость</span></div>
@@ -79,6 +80,15 @@
       <p>Управление: ← → ↑ ↓ / WASD</p>
       <p>Автоогонь включён постоянно.</p>
       <p>На телефоне: ведите палец по экрану.</p>
+      <div class="difficulty">
+        <p>Сложность:</p>
+        <div class="difficulty-buttons">
+          <button class="difficulty-button" data-difficulty="easy">ЛЁГКАЯ</button>
+          <button class="difficulty-button active" data-difficulty="medium">СРЕДНЯЯ</button>
+          <button class="difficulty-button" data-difficulty="hard">СЛОЖНАЯ</button>
+          <button class="difficulty-button" data-difficulty="insane">НЕВЫНОСИМАЯ</button>
+        </div>
+      </div>
       <button id="startButton">СТАРТ</button>
     </div>
   </div>
