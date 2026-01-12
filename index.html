@@ -3,29 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sky Salvage</title>
+  <title>Combat PRARO</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="hud">
-    <div class="hud-row">
-      <div class="hud-block" id="hearts"></div>
-      <div class="hud-block" id="weapon"></div>
+  <div class="cabinet">
+    <div class="cabinet-frame">
+      <div class="marquee">
+        <span>COMBAT PRARO</span>
+        <span>COMBAT PRARO</span>
+        <span>COMBAT PRARO</span>
+      </div>
+      <canvas id="game" width="420" height="720"></canvas>
+      <div class="scanlines"></div>
+      <div class="screen-glow"></div>
     </div>
-    <div class="hud-row">
-      <div class="hud-block" id="coins"></div>
-      <div class="hud-block" id="time"></div>
-      <div class="hud-block" id="level"></div>
+    <div class="hud">
+      <div class="hud-row">
+        <div class="hud-block" id="hud-lives"></div>
+        <div class="hud-block" id="hud-score"></div>
+      </div>
+      <div class="hud-row">
+        <div class="hud-block" id="hud-level"></div>
+        <div class="hud-block" id="hud-time"></div>
+      </div>
     </div>
   </div>
-  <canvas id="game"></canvas>
-  <div class="overlay hidden" id="gameOver">
+
+  <div class="overlay" id="startOverlay">
+    <div class="panel start">
+      <div class="title">
+        <span>COMBAT</span>
+        <span>PRARO</span>
+      </div>
+      <p>Управление: ← → / A D · Стрельба: ПРОБЕЛ</p>
+      <p>Уклоняйтесь от врагов и их пуль. Соберите максимум очков!</p>
+      <button id="startButton">START</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="levelOverlay">
     <div class="panel">
-      <h1>Поражение</h1>
-      <p id="finalStats"></p>
-      <button id="restart">Начать заново</button>
+      <h2>LEVEL COMPLETE</h2>
+      <p id="levelStats"></p>
+      <button id="nextLevel">NEXT</button>
     </div>
   </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="panel">
+      <h2 id="endTitle"></h2>
+      <p id="endStats"></p>
+      <button id="restart">RESTART</button>
+    </div>
+  </div>
+
   <script src="game.js"></script>
 </body>
 </html>

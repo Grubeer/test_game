@@ -1,523 +1,481 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const hudHearts = document.getElementById("hearts");
-const hudWeapon = document.getElementById("weapon");
-const hudCoins = document.getElementById("coins");
-const hudTime = document.getElementById("time");
-const hudLevel = document.getElementById("level");
-const gameOverOverlay = document.getElementById("gameOver");
-const finalStats = document.getElementById("finalStats");
+const hudLives = document.getElementById("hud-lives");
+const hudScore = document.getElementById("hud-score");
+const hudLevel = document.getElementById("hud-level");
+const hudTime = document.getElementById("hud-time");
+
+const startOverlay = document.getElementById("startOverlay");
+const levelOverlay = document.getElementById("levelOverlay");
+const endOverlay = document.getElementById("endOverlay");
+const levelStats = document.getElementById("levelStats");
+const endTitle = document.getElementById("endTitle");
+const endStats = document.getElementById("endStats");
+const startButton = document.getElementById("startButton");
+const nextLevelButton = document.getElementById("nextLevel");
 const restartButton = document.getElementById("restart");
 
 const keys = new Set();
 let lastFrame = performance.now();
 
-const levelConfigs = [
+const palette = {
+  sky: "#050816",
+  stars: "#dbe7ff",
+  nebula: "#3b2d64",
+  player: "#7df9ff",
+  playerAccent: "#2bffae",
+  enemy: "#ff5b5b",
+  enemyAccent: "#ffa14b",
+  bullet: "#ffe66d",
+  enemyBullet: "#ffb3ff",
+  ui: "#7df9ff",
+};
+
+const playerSkins = [
   {
-    level: 1,
-    enemyHealth: 2,
-    enemySpeed: 60,
-    spawnInterval: 2.8,
-    pickupInterval: 6.5,
-    weaponPool: ["rapid"],
+    name: "Scout",
+    color: "#7df9ff",
+    accent: "#2bffae",
+    speed: 150,
+    fireRate: 3,
+    lives: 3,
   },
   {
-    level: 2,
-    enemyHealth: 3,
-    enemySpeed: 80,
-    spawnInterval: 2.3,
-    pickupInterval: 6,
-    weaponPool: ["rapid", "burst"],
+    name: "Falcon",
+    color: "#7fffb6",
+    accent: "#ffd166",
+    speed: 165,
+    fireRate: 3.6,
+    lives: 3,
   },
   {
-    level: 3,
-    enemyHealth: 4,
-    enemySpeed: 100,
-    spawnInterval: 1.9,
-    pickupInterval: 5.5,
-    weaponPool: ["rapid", "burst", "spread"],
+    name: "Raptor",
+    color: "#5ecbff",
+    accent: "#ff6b6b",
+    speed: 180,
+    fireRate: 4.1,
+    lives: 3.5,
   },
   {
-    level: 4,
-    enemyHealth: 5,
-    enemySpeed: 115,
-    spawnInterval: 1.6,
-    pickupInterval: 5,
-    weaponPool: ["burst", "spread", "pierce"],
+    name: "Viper",
+    color: "#b88bff",
+    accent: "#2bffae",
+    speed: 195,
+    fireRate: 4.8,
+    lives: 4,
   },
   {
-    level: 5,
-    enemyHealth: 6,
-    enemySpeed: 130,
-    spawnInterval: 1.3,
-    pickupInterval: 4.6,
-    weaponPool: ["burst", "spread", "pierce", "laser"],
+    name: "Phantom",
+    color: "#ff7bd6",
+    accent: "#ffe66d",
+    speed: 210,
+    fireRate: 5.4,
+    lives: 4.5,
+  },
+  {
+    name: "Nova",
+    color: "#fff1a8",
+    accent: "#7df9ff",
+    speed: 225,
+    fireRate: 6,
+    lives: 5,
   },
 ];
 
-const weapons = {
-  basic: {
-    name: "Стандарт",
-    fireRate: 3,
-    bulletSpeed: 320,
-    damage: 1,
-    spread: 0,
-    bulletsPerShot: 1,
-    pierce: 0,
-  },
-  rapid: {
-    name: "Шквальный",
-    fireRate: 6,
-    bulletSpeed: 340,
-    damage: 1,
-    spread: 0.08,
-    bulletsPerShot: 1,
-    pierce: 0,
-  },
-  burst: {
-    name: "Турбо",
-    fireRate: 4.2,
-    bulletSpeed: 360,
-    damage: 1.3,
-    spread: 0.1,
-    bulletsPerShot: 2,
-    pierce: 0,
-  },
-  spread: {
-    name: "Картечь",
-    fireRate: 3.4,
-    bulletSpeed: 330,
-    damage: 1.1,
-    spread: 0.35,
-    bulletsPerShot: 4,
-    pierce: 0,
-  },
-  pierce: {
-    name: "Пробой",
-    fireRate: 3.1,
-    bulletSpeed: 380,
-    damage: 1.6,
-    spread: 0.12,
-    bulletsPerShot: 1,
-    pierce: 1,
-  },
-  laser: {
-    name: "Фотон",
-    fireRate: 2.6,
-    bulletSpeed: 440,
-    damage: 2.2,
-    spread: 0.04,
-    bulletsPerShot: 1,
-    pierce: 2,
-  },
-};
+const levels = Array.from({ length: 6 }, (_, index) => {
+  const level = index + 1;
+  return {
+    level,
+    duration: 28 + level * 4,
+    enemySpeed: 40 + level * 8,
+    enemyRate: Math.max(0.7, 2.2 - level * 0.2),
+    enemyBulletRate: Math.max(1.2, 2.6 - level * 0.2),
+  };
+});
 
 const state = {
+  phase: "start",
+  levelIndex: 0,
+  levelTimer: 0,
+  levelHold: 0,
+  time: 0,
+  score: 0,
   player: null,
   bullets: [],
   enemies: [],
-  pickups: [],
-  coins: 0,
-  maxTime: Number(localStorage.getItem("maxTime")) || 0,
-  startTime: 0,
+  enemyBullets: [],
+  starfield: [],
+  shakes: 0,
+  lastEnemy: 0,
+  lastEnemyShot: 0,
   lastShot: 0,
-  lastSpawn: 0,
-  lastPickup: 0,
-  level: 1,
-  config: levelConfigs[0],
-  isGameOver: false,
 };
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const rand = (min, max) => Math.random() * (max - min) + min;
-const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+function initStarfield() {
+  state.starfield = Array.from({ length: 120 }, () => ({
+    x: rand(0, canvas.width),
+    y: rand(0, canvas.height),
+    size: Math.floor(rand(1, 3)),
+    speed: rand(20, 60),
+    twinkle: rand(0.2, 1),
+  }));
 }
 
-function resetGame() {
-  resize();
+function resetPlayer() {
+  const skin = playerSkins[state.levelIndex] || playerSkins[playerSkins.length - 1];
   state.player = {
-    x: canvas.width * 0.5,
-    y: canvas.height * 0.7,
-    radius: 18,
-    speed: 230,
-    direction: -Math.PI / 2,
-    lives: 3,
-    invuln: 0,
-    weapon: "basic",
+    x: canvas.width / 2,
+    y: canvas.height * 0.78,
+    width: 26,
+    height: 40,
+    speed: skin.speed,
+    fireRate: skin.fireRate,
+    lives: skin.lives,
+    maxLives: skin.lives,
+    skin,
+    wobble: 0,
   };
+}
+
+function resetLevel() {
+  state.levelTimer = 0;
+  state.levelHold = 0;
   state.bullets = [];
   state.enemies = [];
-  state.pickups = [];
-  state.coins = 0;
-  state.startTime = performance.now();
+  state.enemyBullets = [];
+  state.lastEnemy = 0;
+  state.lastEnemyShot = 0;
   state.lastShot = 0;
-  state.lastSpawn = 0;
-  state.lastPickup = 0;
-  state.level = 1;
-  state.config = levelConfigs[0];
-  state.isGameOver = false;
-  gameOverOverlay.classList.add("hidden");
+  resetPlayer();
 }
 
-function currentTime() {
-  return (performance.now() - state.startTime) / 1000;
+function startGame() {
+  state.phase = "play";
+  state.score = 0;
+  state.levelIndex = 0;
+  state.time = 0;
+  startOverlay.classList.add("hidden");
+  levelOverlay.classList.add("hidden");
+  endOverlay.classList.add("hidden");
+  resetLevel();
 }
 
-function updateLevel() {
-  const time = currentTime();
-  const newLevel = Math.min(5, Math.floor(time / 30) + 1);
-  if (newLevel !== state.level) {
-    state.level = newLevel;
-    state.config = levelConfigs[newLevel - 1];
+function nextLevel() {
+  state.phase = "play";
+  levelOverlay.classList.add("hidden");
+  if (state.levelIndex < levels.length - 1) {
+    state.levelIndex += 1;
+    resetLevel();
   }
+}
+
+function endGame(win) {
+  state.phase = "end";
+  endOverlay.classList.remove("hidden");
+  endTitle.textContent = win ? "YOU WIN" : "GAME OVER";
+  endStats.textContent = `SCORE: ${state.score} · TIME: ${state.time.toFixed(1)}s`;
 }
 
 function spawnEnemy() {
-  const edge = Math.floor(rand(0, 4));
-  const padding = 30;
-  let x = 0;
-  let y = 0;
-  if (edge === 0) {
-    x = rand(0, canvas.width);
-    y = -padding;
-  } else if (edge === 1) {
-    x = canvas.width + padding;
-    y = rand(0, canvas.height);
-  } else if (edge === 2) {
-    x = rand(0, canvas.width);
-    y = canvas.height + padding;
-  } else {
-    x = -padding;
-    y = rand(0, canvas.height);
-  }
+  const width = 26;
+  const height = 30;
   state.enemies.push({
-    x,
-    y,
-    radius: rand(16, 24),
-    speed: state.config.enemySpeed + rand(-10, 10),
-    health: state.config.enemyHealth,
+    x: rand(30, canvas.width - 30),
+    y: -40,
+    width,
+    height,
+    speed: levels[state.levelIndex].enemySpeed,
+    wobble: rand(-1, 1),
+    lives: 2 + state.levelIndex,
   });
 }
 
-function spawnPickup() {
-  const pool = state.config.weaponPool;
-  const weapon = pool[Math.floor(rand(0, pool.length))];
-  state.pickups.push({
-    x: rand(40, canvas.width - 40),
-    y: rand(60, canvas.height * 0.6),
-    radius: 14,
-    weapon,
-    ttl: 12,
+function spawnPlayerBullet() {
+  state.bullets.push({
+    x: state.player.x,
+    y: state.player.y - 18,
+    width: 4,
+    height: 10,
+    speed: 280,
   });
 }
 
-function shoot(now) {
-  const weapon = weapons[state.player.weapon];
-  const fireDelay = 1000 / weapon.fireRate;
-  if (now - state.lastShot < fireDelay) return;
-  state.lastShot = now;
-  for (let i = 0; i < weapon.bulletsPerShot; i += 1) {
-    const spread = weapon.spread * (weapon.bulletsPerShot === 1 ? 0 : (i - (weapon.bulletsPerShot - 1) / 2));
-    const angle = state.player.direction + spread;
-    state.bullets.push({
-      x: state.player.x,
-      y: state.player.y,
-      radius: 4,
-      speed: weapon.bulletSpeed,
-      angle,
-      damage: weapon.damage,
-      pierce: weapon.pierce,
-    });
-  }
+function spawnEnemyBullet(enemy) {
+  state.enemyBullets.push({
+    x: enemy.x,
+    y: enemy.y + 18,
+    width: 5,
+    height: 12,
+    speed: 160 + state.levelIndex * 15,
+  });
 }
 
 function updatePlayer(dt, now) {
-  let dx = 0;
-  let dy = 0;
-  if (keys.has("ArrowUp") || keys.has("w")) dy -= 1;
-  if (keys.has("ArrowDown") || keys.has("s")) dy += 1;
-  if (keys.has("ArrowLeft") || keys.has("a")) dx -= 1;
-  if (keys.has("ArrowRight") || keys.has("d")) dx += 1;
-  const length = Math.hypot(dx, dy) || 1;
-  dx /= length;
-  dy /= length;
-  if (dx || dy) {
-    state.player.direction = Math.atan2(dy, dx);
-  }
-  state.player.x = clamp(state.player.x + dx * state.player.speed * dt, 20, canvas.width - 20);
-  state.player.y = clamp(state.player.y + dy * state.player.speed * dt, 20, canvas.height - 20);
+  let direction = 0;
+  if (keys.has("ArrowLeft") || keys.has("a")) direction -= 1;
+  if (keys.has("ArrowRight") || keys.has("d")) direction += 1;
+
+  state.player.wobble += dt * 4;
+  const wobbleOffset = Math.sin(state.player.wobble) * 3;
+  state.player.x = clamp(
+    state.player.x + direction * state.player.speed * dt,
+    30,
+    canvas.width - 30
+  );
+  state.player.y = canvas.height * 0.78 + wobbleOffset;
 
   if (keys.has(" ")) {
-    shoot(now);
-  }
-
-  if (state.player.invuln > 0) {
-    state.player.invuln -= dt;
+    const delay = 1000 / state.player.fireRate;
+    if (now - state.lastShot > delay) {
+      state.lastShot = now;
+      spawnPlayerBullet();
+    }
   }
 }
 
 function updateBullets(dt) {
   state.bullets = state.bullets.filter((bullet) => {
-    bullet.x += Math.cos(bullet.angle) * bullet.speed * dt;
-    bullet.y += Math.sin(bullet.angle) * bullet.speed * dt;
-    return (
-      bullet.x > -20 &&
-      bullet.x < canvas.width + 20 &&
-      bullet.y > -20 &&
-      bullet.y < canvas.height + 20
-    );
+    bullet.y -= bullet.speed * dt;
+    return bullet.y > -20;
+  });
+
+  state.enemyBullets = state.enemyBullets.filter((bullet) => {
+    bullet.y += bullet.speed * dt;
+    return bullet.y < canvas.height + 20;
   });
 }
 
-function updateEnemies(dt) {
+function updateEnemies(dt, now) {
+  const level = levels[state.levelIndex];
+  if (now - state.lastEnemy > level.enemyRate * 1000) {
+    state.lastEnemy = now;
+    spawnEnemy();
+  }
+
   state.enemies.forEach((enemy) => {
-    const angle = Math.atan2(state.player.y - enemy.y, state.player.x - enemy.x);
-    enemy.x += Math.cos(angle) * enemy.speed * dt;
-    enemy.y += Math.sin(angle) * enemy.speed * dt;
+    enemy.y += enemy.speed * dt;
+    enemy.x += Math.sin(enemy.y * 0.02) * enemy.wobble;
+  });
+
+  if (now - state.lastEnemyShot > level.enemyBulletRate * 1000) {
+    state.lastEnemyShot = now;
+    const shooter = state.enemies[Math.floor(rand(0, state.enemies.length))];
+    if (shooter) spawnEnemyBullet(shooter);
+  }
+
+  state.enemies = state.enemies.filter((enemy) => enemy.y < canvas.height + 60);
+}
+
+function updateStarfield(dt) {
+  state.starfield.forEach((star) => {
+    star.y += star.speed * dt;
+    if (star.y > canvas.height) {
+      star.y = -10;
+      star.x = rand(0, canvas.width);
+    }
   });
 }
 
-function updatePickups(dt) {
-  state.pickups = state.pickups.filter((pickup) => {
-    pickup.ttl -= dt;
-    return pickup.ttl > 0;
-  });
+function intersects(a, b) {
+  return (
+    a.x - a.width / 2 < b.x + b.width / 2 &&
+    a.x + a.width / 2 > b.x - b.width / 2 &&
+    a.y - a.height / 2 < b.y + b.height / 2 &&
+    a.y + a.height / 2 > b.y - b.height / 2
+  );
 }
 
 function handleCollisions() {
   state.bullets.forEach((bullet) => {
     state.enemies.forEach((enemy) => {
-      if (enemy.health <= 0) return;
-      if (distance(bullet, enemy) < enemy.radius + bullet.radius) {
-        enemy.health -= bullet.damage;
-        if (bullet.pierce > 0) {
-          bullet.pierce -= 1;
-        } else {
-          bullet.x = -9999;
+      if (enemy.lives <= 0) return;
+      if (intersects({ x: bullet.x, y: bullet.y, width: bullet.width, height: bullet.height }, enemy)) {
+        enemy.lives -= 1;
+        bullet.y = -999;
+        if (enemy.lives <= 0) {
+          state.score += 150 + state.levelIndex * 40;
+          state.shakes = 6;
         }
       }
     });
   });
 
-  state.bullets = state.bullets.filter((bullet) => bullet.x > -1000);
+  state.bullets = state.bullets.filter((bullet) => bullet.y > -100);
+  state.enemies = state.enemies.filter((enemy) => enemy.lives > 0);
 
-  state.enemies = state.enemies.filter((enemy) => {
-    if (enemy.health <= 0) {
-      state.coins += 1;
-      return false;
+  state.enemyBullets.forEach((bullet) => {
+    if (intersects({ x: bullet.x, y: bullet.y, width: bullet.width, height: bullet.height }, state.player)) {
+      bullet.y = canvas.height + 100;
+      state.player.lives = Math.max(0, state.player.lives - 1);
+      state.shakes = 10;
     }
-    return true;
   });
 
   state.enemies.forEach((enemy) => {
-    if (distance(enemy, state.player) < enemy.radius + state.player.radius) {
-      if (state.player.invuln <= 0) {
-        state.player.lives = Math.max(0, state.player.lives - 0.5);
-        state.player.invuln = 1.2;
-      }
+    if (intersects(enemy, state.player)) {
+      enemy.y = canvas.height + 100;
+      state.player.lives = Math.max(0, state.player.lives - 1);
+      state.shakes = 12;
     }
   });
-
-  state.pickups = state.pickups.filter((pickup) => {
-    if (distance(pickup, state.player) < pickup.radius + state.player.radius) {
-      state.player.weapon = pickup.weapon;
-      return false;
-    }
-    return true;
-  });
 }
 
-function drawHeart(x, y, size, fillPercent) {
-  const half = size / 2;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.beginPath();
-  ctx.moveTo(0, half);
-  ctx.bezierCurveTo(0, 0, -half, 0, -half, half / 1.3);
-  ctx.bezierCurveTo(-half, size, 0, size * 1.1, 0, size * 1.5);
-  ctx.bezierCurveTo(0, size * 1.1, half, size, half, half / 1.3);
-  ctx.bezierCurveTo(half, 0, 0, 0, 0, half);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-  ctx.fill();
-
-  if (fillPercent > 0) {
-    ctx.save();
-    ctx.clip();
-    ctx.fillStyle = "#ff4d5c";
-    ctx.fillRect(-half, 0, size * fillPercent, size * 1.6);
-    ctx.restore();
+function updateLevel(dt) {
+  state.levelTimer += dt;
+  state.time += dt;
+  const level = levels[state.levelIndex];
+  if (state.levelTimer >= level.duration) {
+    state.phase = "levelComplete";
+    state.levelHold = 0;
+    levelOverlay.classList.remove("hidden");
+    levelStats.textContent = `LEVEL ${level.level} COMPLETE · SCORE: ${state.score}`;
   }
-  ctx.restore();
 }
 
-function drawHUD() {
-  hudWeapon.textContent = `Оружие: ${weapons[state.player.weapon].name}`;
-  hudCoins.textContent = `Монеты: ${state.coins}`;
-  const time = currentTime();
-  hudTime.textContent = `Время: ${time.toFixed(1)} c`;
-  hudLevel.textContent = `Уровень: ${state.level}/5`;
-
-  const hearts = [];
-  for (let i = 0; i < 3; i += 1) {
-    const lifeLeft = state.player.lives - i;
-    if (lifeLeft >= 1) {
-      hearts.push("❤️");
-    } else if (lifeLeft === 0.5) {
-      hearts.push("💔");
-    } else {
-      hearts.push("🤍");
-    }
-  }
-  hudHearts.textContent = `Жизни: ${hearts.join(" ")}`;
+function drawPixelText(text, x, y, size, color, align = "center") {
+  ctx.fillStyle = color;
+  ctx.font = `${size}px "Press Start 2P", monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x, y);
 }
 
-function drawBackground() {
-  ctx.fillStyle = "#0b121a";
+function drawStarfield() {
+  ctx.fillStyle = palette.sky;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-  ctx.lineWidth = 1;
-  const grid = 60;
-  for (let x = 0; x <= canvas.width; x += grid) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= canvas.height; y += grid) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
+  ctx.fillStyle = palette.nebula;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = palette.stars;
+  state.starfield.forEach((star) => {
+    ctx.globalAlpha = star.twinkle;
+    ctx.fillRect(star.x, star.y, star.size, star.size);
+  });
+  ctx.globalAlpha = 1;
 }
 
 function drawPlayer() {
-  ctx.save();
-  ctx.translate(state.player.x, state.player.y);
-  ctx.rotate(state.player.direction);
-  ctx.globalAlpha = state.player.invuln > 0 ? 0.6 : 1;
-  ctx.fillStyle = "#7fd4ff";
-  ctx.beginPath();
-  ctx.moveTo(22, 0);
-  ctx.lineTo(-16, -12);
-  ctx.lineTo(-10, 0);
-  ctx.lineTo(-16, 12);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  const { x, y, width, height, skin } = state.player;
+  ctx.fillStyle = skin.color;
+  ctx.fillRect(x - width / 2, y - height / 2, width, height);
+  ctx.fillStyle = skin.accent;
+  ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 6);
+  ctx.fillRect(x - 6, y - height / 2 - 6, 12, 6);
+  ctx.fillRect(x - width / 2 - 6, y - 4, 6, 12);
+  ctx.fillRect(x + width / 2, y - 4, 6, 12);
+  ctx.fillStyle = "#09111f";
+  ctx.fillRect(x - 5, y - height / 2 + 12, 10, 6);
+}
+
+function drawEnemy(enemy) {
+  ctx.fillStyle = palette.enemy;
+  ctx.fillRect(enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height);
+  ctx.fillStyle = palette.enemyAccent;
+  ctx.fillRect(enemy.x - enemy.width / 2 + 4, enemy.y - enemy.height / 2 + 6, enemy.width - 8, 6);
+  ctx.fillRect(enemy.x - 4, enemy.y + enemy.height / 2 - 6, 8, 6);
 }
 
 function drawBullets() {
-  ctx.fillStyle = "#ffe66d";
+  ctx.fillStyle = palette.bullet;
   state.bullets.forEach((bullet) => {
-    ctx.beginPath();
-    ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(bullet.x - bullet.width / 2, bullet.y - bullet.height / 2, bullet.width, bullet.height);
+  });
+
+  ctx.fillStyle = palette.enemyBullet;
+  state.enemyBullets.forEach((bullet) => {
+    ctx.fillRect(bullet.x - bullet.width / 2, bullet.y - bullet.height / 2, bullet.width, bullet.height);
   });
 }
 
-function drawEnemies() {
-  state.enemies.forEach((enemy) => {
-    ctx.fillStyle = "#ff6b6b";
-    ctx.beginPath();
-    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
-    ctx.stroke();
-  });
+function drawHUD() {
+  const livesSegments = Math.ceil(state.player.lives * 2);
+  hudLives.textContent = `HP: ${"█".repeat(livesSegments)}${"░".repeat(Math.max(0, 10 - livesSegments))}`;
+  hudScore.textContent = `SCORE: ${state.score}`;
+  hudLevel.textContent = `LEVEL: ${levels[state.levelIndex].level}/${levels.length}`;
+  hudTime.textContent = `TIME: ${state.time.toFixed(1)}s`;
 }
 
-function drawPickups() {
-  state.pickups.forEach((pickup) => {
-    ctx.fillStyle = "#6ef3c5";
-    ctx.beginPath();
-    ctx.arc(pickup.x, pickup.y, pickup.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(weapons[pickup.weapon].name[0], pickup.x, pickup.y + 1);
-  });
-}
-
-function drawHeartsCanvas() {
-  const baseX = canvas.width - 140;
-  const baseY = 20;
-  for (let i = 0; i < 3; i += 1) {
-    const fill = clamp(state.player.lives - i, 0, 1);
-    drawHeart(baseX + i * 32, baseY, 18, fill);
+function drawScreen() {
+  if (state.shakes > 0) {
+    ctx.save();
+    ctx.translate(rand(-2, 2), rand(-2, 2));
+    state.shakes -= 1;
   }
-}
 
-function draw() {
-  drawBackground();
-  drawPickups();
+  drawStarfield();
   drawBullets();
-  drawEnemies();
+  state.enemies.forEach(drawEnemy);
   drawPlayer();
-  drawHeartsCanvas();
+
+  if (state.shakes > 0) {
+    ctx.restore();
+  }
 }
 
 function gameLoop(now) {
   const dt = Math.min((now - lastFrame) / 1000, 0.05);
   lastFrame = now;
-  if (!state.isGameOver) {
-    updateLevel();
+
+  if (state.phase === "play") {
+    updateStarfield(dt);
     updatePlayer(dt, now);
     updateBullets(dt);
-    updateEnemies(dt);
-    updatePickups(dt);
-
-    if (now - state.lastSpawn > state.config.spawnInterval * 1000) {
-      state.lastSpawn = now;
-      spawnEnemy();
-    }
-    if (now - state.lastPickup > state.config.pickupInterval * 1000) {
-      state.lastPickup = now;
-      spawnPickup();
-    }
-
+    updateEnemies(dt, now);
     handleCollisions();
+    updateLevel(dt);
 
     if (state.player.lives <= 0) {
-      endGame();
+      endGame(false);
     }
   }
 
-  draw();
-  drawHUD();
+  if (state.phase === "levelComplete") {
+    updateStarfield(dt);
+    state.levelHold += dt;
+  }
+
+  if (state.phase === "end") {
+    updateStarfield(dt);
+  }
+
+  drawScreen();
+  if (state.phase !== "start") {
+    drawHUD();
+  }
+
+  if (state.phase === "levelComplete") {
+    const level = levels[state.levelIndex];
+    if (state.levelIndex >= levels.length - 1) {
+      endGame(true);
+    } else if (state.levelHold >= 2) {
+      nextLevel();
+    }
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
-function endGame() {
-  state.isGameOver = true;
-  const time = currentTime();
-  if (time > state.maxTime) {
-    state.maxTime = time;
-    localStorage.setItem("maxTime", String(time));
-  }
-  finalStats.textContent = `Время: ${time.toFixed(1)} c · Макс: ${state.maxTime.toFixed(1)} c · Монеты: ${state.coins} · Уровень: ${state.level}/5`;
-  gameOverOverlay.classList.remove("hidden");
-}
-
-window.addEventListener("resize", resize);
 window.addEventListener("keydown", (event) => {
   keys.add(event.key);
-  if (event.key.toLowerCase() === "r" && state.isGameOver) {
-    resetGame();
+  if (event.key.toLowerCase() === "p" && state.phase === "play") {
+    state.phase = "pause";
+  } else if (event.key.toLowerCase() === "p" && state.phase === "pause") {
+    state.phase = "play";
   }
 });
+
 window.addEventListener("keyup", (event) => {
   keys.delete(event.key);
 });
-restartButton.addEventListener("click", resetGame);
 
-resetGame();
+startButton.addEventListener("click", startGame);
+nextLevelButton.addEventListener("click", nextLevel);
+restartButton.addEventListener("click", startGame);
+
+initStarfield();
+resetPlayer();
 requestAnimationFrame(gameLoop);
