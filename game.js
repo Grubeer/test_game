@@ -81,48 +81,84 @@ const palette = {
 const playerSkins = [
   {
     name: "Скаут",
-    color: "#7df9ff",
-    accent: "#2bffae",
+    color: "#8fb6d9",
+    accent: "#4fd1ff",
+    highlight: "#f2f6ff",
+    cockpit: "#1a2b4a",
+    flame: "#ffb347",
+    tier: 1,
+    width: 30,
+    height: 44,
     speed: 180,
     fireRate: 2.2,
     maxHp: 4,
   },
   {
     name: "Фалькон",
-    color: "#7fffb6",
-    accent: "#ffd166",
+    color: "#2bd26f",
+    accent: "#b4ff6b",
+    highlight: "#eafff0",
+    cockpit: "#0c2f1d",
+    flame: "#ffa64d",
+    tier: 2,
+    width: 32,
+    height: 46,
     speed: 190,
     fireRate: 2.6,
     maxHp: 4,
   },
   {
     name: "Раптор",
-    color: "#5ecbff",
-    accent: "#ff6b6b",
+    color: "#21b964",
+    accent: "#5effb1",
+    highlight: "#eafff0",
+    cockpit: "#103b2b",
+    flame: "#ff8f3d",
+    tier: 3,
+    width: 34,
+    height: 48,
     speed: 200,
     fireRate: 3,
     maxHp: 5,
   },
   {
     name: "Вайпер",
-    color: "#b88bff",
-    accent: "#2bffae",
+    color: "#2f78d6",
+    accent: "#8ad9ff",
+    highlight: "#e7f3ff",
+    cockpit: "#0d1f3f",
+    flame: "#ff9c37",
+    tier: 4,
+    width: 36,
+    height: 50,
     speed: 210,
     fireRate: 3.4,
     maxHp: 5,
   },
   {
     name: "Фантом",
-    color: "#ff7bd6",
-    accent: "#ffe66d",
+    color: "#375b92",
+    accent: "#69b4ff",
+    highlight: "#e4ecff",
+    cockpit: "#0b1427",
+    flame: "#ffb13d",
+    tier: 5,
+    width: 38,
+    height: 52,
     speed: 225,
     fireRate: 3.8,
     maxHp: 6,
   },
   {
     name: "Нова",
-    color: "#fff1a8",
-    accent: "#7df9ff",
+    color: "#1e2f4a",
+    accent: "#f6c945",
+    highlight: "#cbe7ff",
+    cockpit: "#0b1220",
+    flame: "#51e5ff",
+    tier: 6,
+    width: 40,
+    height: 54,
     speed: 240,
     fireRate: 4.2,
     maxHp: 6,
@@ -433,8 +469,8 @@ function resetPlayer() {
   state.player = {
     x: GAME_WIDTH / 2,
     y: GAME_HEIGHT * 0.75,
-    width: 30,
-    height: 44,
+    width: skin.width,
+    height: skin.height,
     speed: skin.speed,
     fireRate: skin.fireRate,
     hp: skin.maxHp,
@@ -1236,24 +1272,204 @@ function drawStarfield() {
   ctx.globalAlpha = 1;
 }
 
+function drawPixelShip({ x, y, skin }) {
+  const unit = 2;
+  const drawBlocks = (blocks, color) => {
+    if (!blocks.length) return;
+    ctx.fillStyle = color;
+    blocks.forEach(([bx, by, bw, bh]) => {
+      ctx.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
+    });
+  };
+
+  const styleMap = {
+    1: {
+      body: [
+        [-2, -10, 4, 14],
+        [-1, -12, 2, 3],
+        [-6, -3, 12, 4],
+        [-4, 2, 3, 5],
+        [1, 2, 3, 5],
+        [-1, 5, 2, 6],
+      ],
+      accent: [
+        [-1, -6, 2, 4],
+        [-4, -1, 3, 2],
+        [1, -1, 3, 2],
+      ],
+      highlight: [
+        [-1, -11, 2, 1],
+        [-5, -2, 2, 1],
+        [3, -2, 2, 1],
+      ],
+      cockpit: [[-1, -4, 2, 3]],
+      flame: [
+        [-3, 8, 2, 3],
+        [1, 8, 2, 3],
+      ],
+    },
+    2: {
+      body: [
+        [-3, -11, 6, 16],
+        [-1, -13, 2, 3],
+        [-7, -4, 14, 5],
+        [-6, 1, 4, 6],
+        [2, 1, 4, 6],
+        [-2, 5, 4, 7],
+      ],
+      accent: [
+        [-1, -7, 2, 5],
+        [-5, -2, 3, 2],
+        [2, -2, 3, 2],
+      ],
+      highlight: [
+        [-1, -12, 2, 1],
+        [-6, -3, 2, 1],
+        [4, -3, 2, 1],
+      ],
+      cockpit: [[-1, -5, 2, 4]],
+      flame: [
+        [-5, 9, 2, 3],
+        [3, 9, 2, 3],
+      ],
+    },
+    3: {
+      body: [
+        [-3, -12, 6, 17],
+        [-1, -14, 2, 3],
+        [-8, -5, 16, 5],
+        [-7, 0, 5, 7],
+        [2, 0, 5, 7],
+        [-2, 5, 4, 8],
+        [-1, -9, 2, 3],
+      ],
+      accent: [
+        [-1, -8, 2, 5],
+        [-6, -3, 3, 2],
+        [3, -3, 3, 2],
+        [-2, 1, 4, 2],
+      ],
+      highlight: [
+        [-1, -13, 2, 1],
+        [-7, -4, 2, 1],
+        [5, -4, 2, 1],
+      ],
+      cockpit: [[-1, -6, 2, 4]],
+      flame: [
+        [-6, 10, 2, 3],
+        [4, 10, 2, 3],
+        [-1, 10, 2, 3],
+      ],
+    },
+    4: {
+      body: [
+        [-4, -13, 8, 18],
+        [-1, -15, 2, 3],
+        [-9, -6, 18, 5],
+        [-8, -1, 6, 8],
+        [2, -1, 6, 8],
+        [-2, 6, 4, 8],
+        [-1, -10, 2, 3],
+        [-5, -9, 2, 3],
+        [3, -9, 2, 3],
+      ],
+      accent: [
+        [-1, -9, 2, 6],
+        [-7, -4, 3, 2],
+        [4, -4, 3, 2],
+        [-3, 1, 6, 2],
+      ],
+      highlight: [
+        [-1, -14, 2, 1],
+        [-8, -5, 2, 1],
+        [6, -5, 2, 1],
+      ],
+      cockpit: [[-1, -7, 2, 4]],
+      flame: [
+        [-7, 11, 2, 3],
+        [5, 11, 2, 3],
+        [-2, 11, 4, 3],
+      ],
+    },
+    5: {
+      body: [
+        [-4, -14, 8, 19],
+        [-1, -16, 2, 3],
+        [-10, -7, 20, 5],
+        [-9, -2, 7, 8],
+        [2, -2, 7, 8],
+        [-3, 7, 6, 8],
+        [-2, -11, 4, 4],
+        [-6, -10, 2, 4],
+        [4, -10, 2, 4],
+      ],
+      accent: [
+        [-1, -10, 2, 6],
+        [-8, -5, 3, 2],
+        [5, -5, 3, 2],
+        [-3, 1, 6, 2],
+        [-5, 3, 10, 2],
+      ],
+      highlight: [
+        [-1, -15, 2, 1],
+        [-9, -6, 2, 1],
+        [7, -6, 2, 1],
+      ],
+      cockpit: [[-1, -8, 2, 4]],
+      flame: [
+        [-8, 12, 2, 3],
+        [6, 12, 2, 3],
+        [-3, 12, 6, 3],
+      ],
+    },
+    6: {
+      body: [
+        [-5, -15, 10, 20],
+        [-1, -17, 2, 3],
+        [-11, -8, 22, 5],
+        [-10, -3, 8, 9],
+        [2, -3, 8, 9],
+        [-3, 8, 6, 8],
+        [-2, -12, 4, 4],
+        [-7, -11, 2, 4],
+        [5, -11, 2, 4],
+        [-6, -6, 2, 5],
+        [4, -6, 2, 5],
+      ],
+      accent: [
+        [-1, -11, 2, 6],
+        [-9, -6, 3, 2],
+        [6, -6, 3, 2],
+        [-4, 1, 8, 2],
+        [-6, 3, 12, 2],
+      ],
+      highlight: [
+        [-1, -16, 2, 1],
+        [-10, -7, 2, 1],
+        [8, -7, 2, 1],
+      ],
+      cockpit: [[-1, -9, 2, 4]],
+      flame: [
+        [-9, 13, 2, 3],
+        [7, 13, 2, 3],
+        [-4, 13, 8, 3],
+      ],
+    },
+  };
+
+  const style = styleMap[skin.tier] || styleMap[1];
+  drawBlocks(style.body, skin.color);
+  drawBlocks(style.accent, skin.accent);
+  drawBlocks(style.highlight, skin.highlight);
+  drawBlocks(style.cockpit, skin.cockpit);
+  drawBlocks(style.flame, skin.flame);
+}
+
 function drawPlayer() {
   const { x, y, width, height, skin, invuln, shield } = state.player;
   if (invuln > 0 && Math.floor(invuln * 10) % 2 === 0) return;
 
-  ctx.fillStyle = skin.color;
-  ctx.fillRect(x - width / 2, y - height / 2, width, height);
-  ctx.fillStyle = skin.accent;
-  ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 8);
-  ctx.fillRect(x - 12, y - height / 2 - 8, 24, 8);
-  ctx.fillRect(x - width / 2 - 10, y - 6, 10, 18);
-  ctx.fillRect(x + width / 2, y - 6, 10, 18);
-  ctx.fillRect(x - 6, y - height / 2 - 12, 12, 4);
-  ctx.fillStyle = "#09111f";
-  ctx.fillRect(x - 6, y - height / 2 + 18, 12, 8);
-  ctx.fillStyle = skin.accent;
-  ctx.fillRect(x - width / 2 + 6, y + height / 2 - 6, width - 12, 6);
-  ctx.fillRect(x - width / 2 + 2, y + height / 2, 8, 6);
-  ctx.fillRect(x + width / 2 - 10, y + height / 2, 8, 6);
+  drawPixelShip({ x, y, skin });
 
   if (shield > 0) {
     ctx.strokeStyle = palette.shield;
