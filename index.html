@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CosmoPrado</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <div class="cabinet">
+      <div class="cabinet-frame">
+        <canvas id="game" width="420" height="720"></canvas>
+        <div class="scanlines"></div>
+        <div class="screen-glow"></div>
+        <div class="boss-banner hidden" id="bossBanner">БОСС: Roberto_Prado</div>
+        <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
+        <div class="hud">
+          <div class="hud-top">
+            <div class="hud-block" id="hud-score"></div>
+            <div class="hud-block hud-center">
+              <div id="hud-level"></div>
+              <div class="hud-weapon-mini" id="hud-weapon"></div>
+            </div>
+            <div class="hud-actions">
+              <button class="hud-button" id="pauseButton">ПАУЗА</button>
+              <button class="hud-button" id="finishButton">ВЫХОД</button>
+              <button class="sound-toggle" id="soundToggle" aria-label="Звук">🔊</button>
+            </div>
+          </div>
+          <div class="hud-bottom">
+            <div class="hud-block" id="hud-lives"></div>
+            <div class="hud-block" id="hud-shield"></div>
+          </div>
+          <div class="boss-bar hidden" id="bossBar">
+            <span id="bossName"></span>
+            <div class="boss-health">
+              <div class="boss-health-fill" id="bossHealthFill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="marquee">CosmoPrado</div>
+      <button class="stats-toggle" id="statsToggle">СТАТИСТИКА</button>
+    </div>
+
+    <aside class="stats-panel" id="statsPanel">
+      <div class="panel-logo">CosmoPrado</div>
+      <div class="panel-header">ЛИЧНАЯ СТАТИСТИКА</div>
+      <div class="panel-body">
+        <div class="stat-row"><span>Игрок:</span><span id="stat-player">Гость</span></div>
+        <div class="stat-row"><span>Уровень:</span><span id="stat-level">1</span></div>
+        <div class="stat-row"><span>Очки:</span><span id="stat-score">0</span></div>
+        <div class="stat-row"><span>Время:</span><span id="stat-time">0.0с</span></div>
+        <div class="stat-row"><span>Уничтожено:</span><span id="stat-kills">0</span></div>
+        <div class="stat-row"><span>Пропущено:</span><span id="stat-missed">0</span></div>
+        <div class="stat-row"><span>Урон от пропусков:</span><span id="stat-miss-damage">0</span></div>
+        <div class="stat-row"><span>Получено урона:</span><span id="stat-damage">0</span></div>
+        <div class="stat-row"><span>Бусты всего:</span><span id="stat-boosts">0</span></div>
+        <div class="stat-row"><span>Оружие:</span><span id="stat-boost-weapon">0</span></div>
+        <div class="stat-row"><span>Щит:</span><span id="stat-boost-shield">0</span></div>
+        <div class="stat-row"><span>Лечение:</span><span id="stat-boost-heal">0</span></div>
+        <div class="stat-row"><span>Прочие:</span><span id="stat-boost-other">0</span></div>
+        <div class="stat-row"><span>Макс. уровень оружия:</span><span id="stat-weapon-max">1</span></div>
+        <div class="stat-row"><span>Серия:</span><span id="stat-combo">0</span></div>
+        <div class="stat-row"><span>Лучший стрик:</span><span id="stat-best-combo">0</span></div>
+        <div class="stat-row"><span>Точность:</span><span id="stat-accuracy">0%</span></div>
+      </div>
+      <div class="panel-header">ЛУЧШИЕ РЕЗУЛЬТАТЫ</div>
+      <div class="panel-body" id="leaderboard"></div>
+    </aside>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="panel start">
+      <div class="title">
+        <span>COSMO</span>
+        <span>PRADO</span>
+      </div>
+      <p>Управление: ← → ↑ ↓ / WASD</p>
+      <p>Автоогонь включён постоянно.</p>
+      <p>На телефоне: ведите палец по экрану.</p>
+      <div class="difficulty">
+        <p>Сложность:</p>
+        <div class="difficulty-buttons">
+          <button class="difficulty-button" data-difficulty="easy">ЛЁГКАЯ</button>
+          <button class="difficulty-button active" data-difficulty="medium">СРЕДНЯЯ</button>
+          <button class="difficulty-button" data-difficulty="hard">СЛОЖНАЯ</button>
+          <button class="difficulty-button" data-difficulty="insane">НЕВЫНОСИМАЯ</button>
+        </div>
+      </div>
+      <button id="startButton">СТАРТ</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="pauseOverlay">
+    <div class="panel pause">
+      <h2>ПАУЗА</h2>
+      <p>ESC / P / кнопка ПАУЗА</p>
+      <button id="finishButtonPause">ЗАВЕРШИТЬ ИГРУ</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="endOverlay">
+    <div class="panel">
+      <h2 id="endTitle"></h2>
+      <p id="endStats"></p>
+      <label class="input-label" for="playerName">Введите имя:</label>
+      <input id="playerName" class="name-input" type="text" maxlength="16" placeholder="Ваше имя" />
+      <div class="button-row">
+        <button id="saveResult">СОХРАНИТЬ РЕЗУЛЬТАТ</button>
+        <button id="restart">ИГРАТЬ СНОВА</button>
+        <button id="backToMenu">В МЕНЮ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
