@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Combat PRADO</title>
+  <title>CosmoPrado</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="layout">
     <div class="cabinet">
       <div class="cabinet-frame">
-        <div class="marquee">Combat PRADO</div>
         <canvas id="game" width="420" height="720"></canvas>
         <div class="scanlines"></div>
         <div class="screen-glow"></div>
+        <div class="boss-banner hidden" id="bossBanner">БОСС: Roberto_Prado</div>
         <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
         <div class="hud">
           <div class="hud-top">
@@ -32,8 +32,15 @@
             <div class="hud-block" id="hud-lives"></div>
             <div class="hud-block" id="hud-shield"></div>
           </div>
+          <div class="boss-bar hidden" id="bossBar">
+            <span id="bossName"></span>
+            <div class="boss-health">
+              <div class="boss-health-fill" id="bossHealthFill"></div>
+            </div>
+          </div>
         </div>
       </div>
+      <div class="marquee">CosmoPrado</div>
       <button class="stats-toggle" id="statsToggle">СТАТИСТИКА</button>
     </div>
 
@@ -66,7 +73,7 @@
   <div class="overlay" id="startOverlay">
     <div class="panel start">
       <div class="title">
-        <span>COMBAT</span>
+        <span>COSMO</span>
         <span>PRADO</span>
       </div>
       <p>Управление: ← → ↑ ↓ / WASD</p>

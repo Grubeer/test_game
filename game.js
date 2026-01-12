@@ -2,8 +2,8 @@ const canvas = document.getElementById("game");
 const displayCtx = canvas.getContext("2d");
 const bufferCanvas = document.createElement("canvas");
 const ctx = bufferCanvas.getContext("2d");
-const GAME_WIDTH = 240;
-const GAME_HEIGHT = 400;
+const GAME_WIDTH = 260;
+const GAME_HEIGHT = 520;
 bufferCanvas.width = GAME_WIDTH;
 bufferCanvas.height = GAME_HEIGHT;
 displayCtx.imageSmoothingEnabled = false;
@@ -15,6 +15,10 @@ const hudLives = document.getElementById("hud-lives");
 const hudShield = document.getElementById("hud-shield");
 const hudWeapon = document.getElementById("hud-weapon");
 const levelBanner = document.getElementById("levelBanner");
+const bossBanner = document.getElementById("bossBanner");
+const bossBar = document.getElementById("bossBar");
+const bossNameLabel = document.getElementById("bossName");
+const bossHealthFill = document.getElementById("bossHealthFill");
 const startOverlay = document.getElementById("startOverlay");
 const pauseOverlay = document.getElementById("pauseOverlay");
 const endOverlay = document.getElementById("endOverlay");
@@ -188,20 +192,25 @@ const musicTracks = {
     melody: [392, 330, 349, 392, 440, 392, 349, 330],
     bass: [131, 131, 147, 165, 131, 131, 147, 165],
   },
-  early: {
+  levelA: {
     tempo: 220,
     melody: [330, 392, 440, 392, 330, 294, 330, 392],
     bass: [110, 110, 123, 131, 110, 110, 123, 131],
   },
-  mid: {
+  levelB: {
     tempo: 210,
     melody: [349, 392, 466, 392, 349, 330, 349, 392],
     bass: [123, 123, 139, 147, 123, 123, 139, 147],
   },
-  late: {
+  levelC: {
     tempo: 200,
     melody: [440, 494, 523, 494, 440, 392, 440, 494],
     bass: [147, 147, 165, 175, 147, 147, 165, 175],
+  },
+  boss: {
+    tempo: 180,
+    melody: [262, 294, 330, 294, 262, 247, 262, 294],
+    bass: [98, 110, 123, 110, 98, 92, 98, 110],
   },
 };
 
@@ -232,6 +241,9 @@ const state = {
   musicTimer: null,
   currentTrack: null,
   runSaved: false,
+  boss: null,
+  bossBannerTimer: 0,
+  lastBossName: null,
   view: {
     x: 0,
     y: 0,
@@ -257,6 +269,25 @@ const state = {
     hits: 0,
   },
 };
+
+const bossNamesBase = [
+  "Roberto_Prado",
+  "Tom_Prado",
+  "Vlad_Prado",
+  "Jeka_Prado",
+  "Basara_Prado",
+];
+
+const bossNamesExtra = [
+  "Luna_Prado",
+  "Nova_Prado",
+  "Astra_Prado",
+  "Rex_Prado",
+  "Tora_Prado",
+  "Kyra_Prado",
+  "Zed_Prado",
+  "Auri_Prado",
+];
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const rand = (min, max) => Math.random() * (max - min) + min;
@@ -315,6 +346,24 @@ function resetStats() {
   };
 }
 
+function getLevelTrack(level) {
+  if (level <= 4) return "levelA";
+  if (level <= 9) return "levelB";
+  if (level <= 14) return "levelC";
+  const bucket = Math.floor((level - 1) / 5) % 3;
+  return bucket === 0 ? "levelA" : bucket === 1 ? "levelB" : "levelC";
+}
+
+function pickBossName() {
+  const pool = bossNamesBase.concat(bossNamesExtra);
+  let name = pool[Math.floor(rand(0, pool.length))];
+  if (pool.length > 1 && name === state.lastBossName) {
+    name = pool[(pool.indexOf(name) + 1) % pool.length];
+  }
+  state.lastBossName = name;
+  return name;
+}
+
 function resetPlayer() {
   const skin = playerSkins[state.levelIndex] || playerSkins[playerSkins.length - 1];
   state.player = {
@@ -345,9 +394,45 @@ function resetLevel() {
   state.lastPower = 0;
   state.lastShot = 0;
   state.showMiss = 0;
+  state.boss = null;
+  state.bossBannerTimer = 0;
+  bossBar.classList.add("hidden");
+  bossBanner.classList.add("hidden");
   resetPlayer();
   showLevelBanner();
   playSfx("level");
+  if (levels[state.levelIndex].level % 5 === 0) {
+    startBossFight();
+  }
+}
+
+function startBossFight() {
+  const bossIndex = Math.floor(levels[state.levelIndex].level / 5);
+  const maxHp = Math.floor(60 * Math.pow(1.35, bossIndex));
+  state.boss = {
+    name: pickBossName(),
+    x: GAME_WIDTH / 2,
+    y: -60,
+    width: 80,
+    height: 40,
+    hp: maxHp,
+    maxHp,
+    phase: 1,
+    entering: true,
+    attackTimer: 2,
+    moveDir: 1,
+    minionTimer: 6,
+  };
+  bossBanner.textContent = `БОСС: ${state.boss.name}`;
+  bossBanner.classList.remove("hidden");
+  state.bossBannerTimer = 1.8;
+  bossBar.classList.remove("hidden");
+  bossNameLabel.textContent = state.boss.name;
+  bossHealthFill.style.width = "100%";
+  spawnPowerup(GAME_WIDTH * 0.3, -10, "shield");
+  spawnPowerup(GAME_WIDTH * 0.7, -10, "weapon");
+  playBossIntro();
+  setTimeout(() => switchMusic("boss"), 900);
 }
 
 function showLevelBanner() {
@@ -374,13 +459,14 @@ function startGame() {
   resetStats();
   resetLevel();
   initAudio();
-  switchMusic("early");
+  switchMusic(getLevelTrack(levels[state.levelIndex].level));
 }
 
 function endGame(win) {
   state.phase = "end";
   state.runSaved = false;
   endOverlay.classList.remove("hidden");
+  bossBar.classList.add("hidden");
   endTitle.textContent = win ? "ПОБЕДА!" : "ИГРА ОКОНЧЕНА";
   endStats.textContent = `ОЧКИ: ${state.score} · ВРЕМЯ: ${state.time.toFixed(1)}с · УНИЧТОЖЕНО: ${state.stats.kills} · ПРОПУЩЕНО: ${state.stats.missed}`;
   saveResultButton.disabled = false;
@@ -479,6 +565,13 @@ function playSfx(type) {
     playTone(196, 0.25, "triangle", 0.2);
     playTone(165, 0.25, "triangle", 0.2);
   }
+}
+
+function playBossIntro() {
+  if (!state.audio || !state.soundOn) return;
+  playTone(196, 0.2, "square", 0.2);
+  setTimeout(() => playTone(220, 0.2, "square", 0.2), 220);
+  setTimeout(() => playTone(247, 0.25, "square", 0.2), 460);
 }
 
 function scheduleMusic(trackKey) {
@@ -686,6 +779,9 @@ function updateStarfield(dt) {
 }
 
 function updateEnemies(dt) {
+  if (state.boss) {
+    return;
+  }
   const level = levels[state.levelIndex];
   if (state.time - state.lastEnemy > level.spawnRate) {
     state.lastEnemy = state.time;
@@ -722,6 +818,86 @@ function updateEnemies(dt) {
     }
     return true;
   });
+}
+
+function updateBoss(dt) {
+  const boss = state.boss;
+  if (!boss) return;
+  bossBar.classList.remove("hidden");
+  bossNameLabel.textContent = boss.name;
+  if (boss.entering) {
+    boss.y += 40 * dt;
+    if (boss.y >= 80) {
+      boss.y = 80;
+      boss.entering = false;
+    }
+    return;
+  }
+
+  boss.x += boss.moveDir * 40 * dt;
+  if (boss.x < 50 || boss.x > GAME_WIDTH - 50) {
+    boss.moveDir *= -1;
+  }
+
+  const hpRatio = boss.hp / boss.maxHp;
+  boss.phase = hpRatio < 0.33 ? 3 : hpRatio < 0.66 ? 2 : 1;
+  boss.attackTimer -= dt;
+  if (boss.attackTimer <= 0) {
+    if (boss.phase === 1) {
+      spawnEnemyBullet(boss, -0.2, 20);
+      spawnEnemyBullet(boss, 0, 10);
+      spawnEnemyBullet(boss, 0.2, 20);
+      boss.attackTimer = 1.8;
+    } else if (boss.phase === 2) {
+      spawnEnemyBullet(boss, -0.08, 30);
+      spawnEnemyBullet(boss, 0, 30);
+      spawnEnemyBullet(boss, 0.08, 30);
+      boss.attackTimer = 1.4;
+    } else {
+      spawnEnemyBullet(boss, -0.26, 40);
+      spawnEnemyBullet(boss, -0.13, 35);
+      spawnEnemyBullet(boss, 0, 30);
+      spawnEnemyBullet(boss, 0.13, 35);
+      spawnEnemyBullet(boss, 0.26, 40);
+      boss.attackTimer = 1.2;
+    }
+  }
+
+  if (boss.phase >= 3) {
+    boss.minionTimer -= dt;
+    if (boss.minionTimer <= 0) {
+      boss.minionTimer = 6;
+      if (state.enemies.length < 2) {
+        state.enemies.push({
+          type: enemyTypes[0],
+          x: rand(30, GAME_WIDTH - 30),
+          y: -30,
+          width: 24,
+          height: 28,
+          speed: 60,
+          hp: 1,
+          wiggle: rand(-1, 1),
+          telegraph: 0,
+          fireTimer: 2.4,
+          fireQueued: false,
+        });
+      }
+    }
+  }
+
+  bossHealthFill.style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+}
+
+function drawBoss() {
+  const boss = state.boss;
+  if (!boss) return;
+  ctx.fillStyle = "#7b4bff";
+  ctx.fillRect(boss.x - boss.width / 2, boss.y - boss.height / 2, boss.width, boss.height);
+  ctx.fillStyle = "#ffb3ff";
+  ctx.fillRect(boss.x - boss.width / 2 + 6, boss.y - boss.height / 2 + 6, boss.width - 12, 6);
+  ctx.fillRect(boss.x - 10, boss.y + boss.height / 2 - 6, 20, 6);
+  ctx.fillStyle = "#1a0f2a";
+  ctx.fillRect(boss.x - 12, boss.y - 6, 24, 12);
 }
 
 function fireEnemy(enemy) {
@@ -810,6 +986,35 @@ function handleCollisions() {
       }
     });
   });
+
+  if (state.boss) {
+    state.bullets.forEach((bullet) => {
+      if (bullet.y < -500) return;
+      if (intersects({ x: bullet.x, y: bullet.y, width: bullet.width, height: bullet.height }, state.boss)) {
+        state.boss.hp -= 1;
+        state.stats.hits += 1;
+        spawnEffect(state.boss.x, state.boss.y, "УДАР", "#ffb3ff");
+        playSfx("hit");
+        if (bullet.pierce > 0) {
+          bullet.pierce -= 1;
+        } else {
+          bullet.y = -999;
+        }
+      }
+    });
+    if (state.boss.hp <= 0) {
+      playSfx("win");
+      bossBar.classList.add("hidden");
+      state.boss = null;
+      if (state.levelIndex >= levels.length - 1) {
+        endGame(true);
+      } else {
+        state.levelIndex += 1;
+        resetLevel();
+        switchMusic(getLevelTrack(levels[state.levelIndex].level));
+      }
+    }
+  }
 
   state.bullets = state.bullets.filter((bullet) => bullet.y > -200);
   state.enemies = state.enemies.filter((enemy) => enemy.hp > 0);
@@ -922,6 +1127,15 @@ function updateLevel(dt) {
       hideLevelBanner();
     }
   }
+  if (state.bossBannerTimer > 0) {
+    state.bossBannerTimer -= dt;
+    if (state.bossBannerTimer <= 0) {
+      bossBanner.classList.add("hidden");
+    }
+  }
+  if (state.boss) {
+    return;
+  }
   const level = levels[state.levelIndex];
   if (state.levelTimer >= level.duration) {
     if (state.levelIndex >= levels.length - 1) {
@@ -929,13 +1143,7 @@ function updateLevel(dt) {
     } else {
       state.levelIndex += 1;
       resetLevel();
-      if (state.levelIndex >= 34) {
-        switchMusic("late");
-      } else if (state.levelIndex >= 17) {
-        switchMusic("mid");
-      } else {
-        switchMusic("early");
-      }
+      switchMusic(getLevelTrack(levels[state.levelIndex].level));
     }
   }
 }
@@ -1086,6 +1294,7 @@ function drawScreen() {
   drawPowerups();
   drawBullets();
   state.enemies.forEach(drawEnemy);
+  drawBoss();
   drawPlayer();
   drawEffects();
 
@@ -1196,6 +1405,7 @@ function gameLoop(now) {
     updateStarfield(dt);
     handlePlayerInput(dt, now);
     updateEnemies(dt);
+    updateBoss(dt);
     updateBullets(dt);
     updatePowerups(dt);
     updateEffects(dt);
@@ -1206,10 +1416,12 @@ function gameLoop(now) {
       endGame(false);
     }
 
-    const level = levels[state.levelIndex];
-    if (state.time - state.lastPower > level.powerRate) {
-      state.lastPower = state.time;
-      spawnPowerup(rand(40, GAME_WIDTH - 40), -20, randomPowerupKind());
+    if (!state.boss) {
+      const level = levels[state.levelIndex];
+      if (state.time - state.lastPower > level.powerRate) {
+        state.lastPower = state.time;
+        spawnPowerup(rand(40, GAME_WIDTH - 40), -20, randomPowerupKind());
+      }
     }
   }
 
