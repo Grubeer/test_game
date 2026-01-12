@@ -113,14 +113,16 @@ const playerSkins = [
   },
 ];
 
-const levels = [
-  { level: 1, duration: 26, spawnRate: 2.6, enemySpeed: 42, powerRate: 8 },
-  { level: 2, duration: 28, spawnRate: 2.3, enemySpeed: 48, powerRate: 7 },
-  { level: 3, duration: 30, spawnRate: 2.0, enemySpeed: 55, powerRate: 6.5 },
-  { level: 4, duration: 32, spawnRate: 1.7, enemySpeed: 63, powerRate: 6 },
-  { level: 5, duration: 34, spawnRate: 1.5, enemySpeed: 70, powerRate: 5.6 },
-  { level: 6, duration: 36, spawnRate: 1.3, enemySpeed: 78, powerRate: 5.2 },
-];
+const levels = Array.from({ length: 50 }, (_, index) => {
+  const level = index + 1;
+  return {
+    level,
+    duration: 22 + Math.min(20, level * 0.6),
+    spawnRate: Math.max(0.8, 2.8 - level * 0.035),
+    enemySpeed: 40 + level * 1.6,
+    powerRate: Math.max(4.2, 7.8 - level * 0.06),
+  };
+});
 
 const enemyTypes = [
   {
@@ -179,6 +181,11 @@ const musicTracks = {
     tempo: 220,
     melody: [330, 392, 440, 392, 330, 294, 330, 392],
     bass: [110, 110, 123, 131, 110, 110, 123, 131],
+  },
+  mid: {
+    tempo: 210,
+    melody: [349, 392, 466, 392, 349, 330, 349, 392],
+    bass: [123, 123, 139, 147, 123, 123, 139, 147],
   },
   late: {
     tempo: 200,
@@ -863,8 +870,12 @@ function updateLevel(dt) {
     } else {
       state.levelIndex += 1;
       resetLevel();
-      if (state.levelIndex >= 3) {
+      if (state.levelIndex >= 34) {
         switchMusic("late");
+      } else if (state.levelIndex >= 17) {
+        switchMusic("mid");
+      } else {
+        switchMusic("early");
       }
     }
   }
@@ -897,13 +908,16 @@ function drawPlayer() {
   ctx.fillRect(x - width / 2, y - height / 2, width, height);
   ctx.fillStyle = skin.accent;
   ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 8);
-  ctx.fillRect(x - 10, y - height / 2 - 8, 20, 8);
-  ctx.fillRect(x - width / 2 - 8, y - 4, 8, 16);
-  ctx.fillRect(x + width / 2, y - 4, 8, 16);
+  ctx.fillRect(x - 12, y - height / 2 - 8, 24, 8);
+  ctx.fillRect(x - width / 2 - 10, y - 6, 10, 18);
+  ctx.fillRect(x + width / 2, y - 6, 10, 18);
+  ctx.fillRect(x - 6, y - height / 2 - 12, 12, 4);
   ctx.fillStyle = "#09111f";
-  ctx.fillRect(x - 6, y - height / 2 + 16, 12, 8);
+  ctx.fillRect(x - 6, y - height / 2 + 18, 12, 8);
   ctx.fillStyle = skin.accent;
   ctx.fillRect(x - width / 2 + 6, y + height / 2 - 6, width - 12, 6);
+  ctx.fillRect(x - width / 2 + 2, y + height / 2, 8, 6);
+  ctx.fillRect(x + width / 2 - 10, y + height / 2, 8, 6);
 
   if (shield > 0) {
     ctx.strokeStyle = palette.shield;
@@ -921,12 +935,15 @@ function drawEnemy(enemy) {
   ctx.fillStyle = palette.enemyAccent;
   ctx.fillRect(x - width / 2 + 4, y - height / 2 + 6, width - 8, 6);
   ctx.fillRect(x - 6, y + height / 2 - 6, 12, 6);
-  ctx.fillRect(x - width / 2 - 6, y - 2, 6, 10);
-  ctx.fillRect(x + width / 2, y - 2, 6, 10);
+  ctx.fillRect(x - width / 2 - 8, y - 4, 8, 12);
+  ctx.fillRect(x + width / 2, y - 4, 8, 12);
+  ctx.fillRect(x - 4, y - height / 2 - 6, 8, 4);
 
   if (type.armored) {
     ctx.fillStyle = "#3d2a2a";
     ctx.fillRect(x - 6, y - 6, 12, 12);
+    ctx.fillRect(x - width / 2 + 2, y - 2, 6, 10);
+    ctx.fillRect(x + width / 2 - 8, y - 2, 6, 10);
   }
 
   if (telegraph > 0) {
@@ -1186,6 +1203,10 @@ pauseButton.addEventListener("click", () => {
 
 statsToggle.addEventListener("click", () => {
   statsPanel.classList.toggle("open");
+});
+
+pauseOverlay.addEventListener("click", () => {
+  togglePause();
 });
 
 startButton.addEventListener("click", () => {
