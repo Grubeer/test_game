@@ -37,7 +37,7 @@ body {
 
 canvas {
   display: block;
-  width: min(360px, 80vw);
+  width: min(360px, 84vw);
   height: min(640px, 78vh);
   image-rendering: pixelated;
   background: #02030b;
@@ -99,6 +99,7 @@ canvas {
   border-radius: 10px;
   margin: 120px 60px;
   animation: bannerPulse 1s infinite alternate;
+  pointer-events: none;
 }
 
 .level-banner.hidden {
@@ -115,37 +116,48 @@ canvas {
 }
 
 .hud {
-  width: min(360px, 80vw);
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  right: 24px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  text-align: center;
+  gap: 6px;
+  pointer-events: none;
 }
 
 .hud-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
   align-items: center;
 }
 
+.hud-row:first-child {
+  grid-template-columns: 1.1fr 0.9fr 0.7fr auto;
+}
+
 .hud-block {
-  flex: 1;
-  padding: 8px 8px;
+  padding: 6px 8px;
   border: 2px solid #3c466e;
-  background: #0a0d1a;
-  font-size: 10px;
+  background: linear-gradient(180deg, #0d1123 0%, #080a18 100%);
+  font-size: 9px;
   color: #f5f5f5;
   text-shadow: 0 0 6px rgba(125, 255, 214, 0.4);
-  min-height: 34px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 0 rgba(0, 0, 0, 0.5);
 }
 
 .hud-block.flash {
   animation: hudFlash 0.4s ease-in-out 2;
+}
+
+.hud-block.glow {
+  animation: hudGlow 0.6s ease-in-out 2;
 }
 
 @keyframes hudFlash {
@@ -158,15 +170,33 @@ canvas {
   }
 }
 
+@keyframes hudGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(125, 255, 214, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(125, 255, 214, 0.8);
+  }
+}
+
+.hud-button,
 .sound-toggle {
-  width: 56px;
-  height: 40px;
+  pointer-events: auto;
   border: 2px solid #3c466e;
   background: #0a0d1a;
   color: #7df9ff;
-  font-size: 18px;
+  font-size: 9px;
+  padding: 6px 8px;
+  height: 28px;
   cursor: pointer;
   text-shadow: 0 0 6px rgba(125, 249, 255, 0.6);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.sound-toggle {
+  width: 40px;
+  font-size: 14px;
 }
 
 .sound-toggle.muted {
@@ -202,6 +232,19 @@ canvas {
   border-color: #6b76e0;
 }
 
+.panel.pause {
+  animation: pausePulse 1s infinite alternate;
+}
+
+@keyframes pausePulse {
+  from {
+    box-shadow: 0 0 8px rgba(125, 249, 255, 0.3);
+  }
+  to {
+    box-shadow: 0 0 16px rgba(125, 249, 255, 0.7);
+  }
+}
+
 .title {
   display: grid;
   gap: 6px;
@@ -227,40 +270,18 @@ button:hover {
   transform: translateY(-1px);
 }
 
-.mobile-controls {
-  width: min(420px, 90vw);
-  display: none;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8px;
-  gap: 12px;
-}
-
-.touch-area {
-  flex: 1;
-  height: 90px;
-  border: 2px dashed #3c466e;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  color: #7df9ff;
-  font-size: 10px;
-  text-shadow: 0 0 6px rgba(125, 249, 255, 0.8);
-}
-
-.fire-button {
-  width: 110px;
-  height: 90px;
-  margin-top: 0;
-  font-size: 14px;
-  background: #ff6b6b;
-  color: #fff4f4;
-  border-color: #cc4242;
-  box-shadow: 0 0 10px rgba(255, 107, 107, 0.6);
-}
-
 @media (max-width: 720px) {
-  .mobile-controls {
-    display: flex;
+  .hud {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .hud-row:first-child {
+    grid-template-columns: 1fr 1fr 0.7fr auto;
+  }
+
+  .hud-block {
+    font-size: 8px;
   }
 }
