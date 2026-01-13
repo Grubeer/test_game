@@ -822,7 +822,7 @@ function resizeCanvas() {
   const height = Math.floor(canvas.clientHeight);
   canvas.width = width;
   canvas.height = height;
-  const scale = Math.max(1, Math.floor(Math.min(width / GAME_WIDTH, height / GAME_HEIGHT)));
+  const scale = Math.max(1, Math.min(width / GAME_WIDTH, height / GAME_HEIGHT));
   const viewWidth = GAME_WIDTH * scale;
   const viewHeight = GAME_HEIGHT * scale;
   state.view = {
@@ -3036,8 +3036,10 @@ difficultyButtons.forEach((button) => {
   });
 });
 
-pauseOverlay.addEventListener("click", () => {
-  togglePause();
+pauseOverlay.addEventListener("click", (event) => {
+  if (event.target === pauseOverlay) {
+    togglePause();
+  }
 });
 
 startButton.addEventListener("click", () => {

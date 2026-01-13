@@ -9,12 +9,7 @@
 <body>
   <div class="layout">
     <div class="cabinet">
-      <div class="cabinet-frame">
-        <canvas id="game" width="420" height="720"></canvas>
-        <div class="scanlines"></div>
-        <div class="screen-glow"></div>
-        <div class="boss-banner hidden" id="bossBanner">БОСС: Roberto_Prado</div>
-        <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
+      <div class="hud-shell">
         <div class="boss-bar" id="bossBar">
           <div class="boss-bar-label">
             <span class="boss-title">БОСС</span>
@@ -42,6 +37,13 @@
             <div class="hud-block" id="hud-shield"></div>
           </div>
         </div>
+      </div>
+      <div class="cabinet-frame">
+        <canvas id="game" width="420" height="720"></canvas>
+        <div class="scanlines"></div>
+        <div class="screen-glow"></div>
+        <div class="boss-banner hidden" id="bossBanner">БОСС: Roberto_Prado</div>
+        <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
       </div>
       <div class="marquee">CosmoPrado</div>
       <button class="stats-toggle" id="statsToggle">СТАТИСТИКА</button>
