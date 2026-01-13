@@ -160,7 +160,7 @@ canvas {
 
 .hud-top {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
+  grid-template-columns: 1fr 0.8fr 1.2fr 1fr;
   gap: 6px;
   align-items: center;
 }
@@ -457,6 +457,214 @@ canvas {
 
 .panel.pause {
   animation: pausePulse 1s infinite alternate;
+}
+
+.panel.hangar {
+  width: min(980px, 92vw);
+  max-height: 88vh;
+  overflow: auto;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+.panel.summary {
+  width: min(420px, 85vw);
+}
+
+.hangar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hangar-coins {
+  padding: 6px 10px;
+  border: 2px solid #3f4a86;
+  background: #0a0d1a;
+  font-size: 10px;
+  color: #ffd166;
+  text-shadow: 0 0 6px rgba(255, 209, 102, 0.6);
+}
+
+.hangar-current {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  border: 2px solid #3f4a86;
+  padding: 12px;
+  background: rgba(10, 12, 30, 0.7);
+}
+
+.hangar-current canvas {
+  width: 140px;
+  height: 140px;
+  aspect-ratio: 1 / 1;
+  max-height: none;
+  border: 2px solid #3f4a86;
+  background: #0a0d1a;
+  image-rendering: pixelated;
+}
+
+.hangar-current-info {
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.hangar-current-name {
+  font-size: 14px;
+  color: #7df9ff;
+}
+
+.hangar-current-class {
+  color: #ffd166;
+}
+
+.hangar-current-trait {
+  color: #c8d4e6;
+}
+
+.hangar-current-stats {
+  display: grid;
+  gap: 2px;
+}
+
+.hangar-current-power {
+  font-size: 11px;
+  color: #9aff6c;
+}
+
+.hangar-body {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.hangar-column h3,
+.hangar-upgrades h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #7df9ff;
+}
+
+.hangar-list {
+  display: grid;
+  gap: 12px;
+}
+
+.hangar-card {
+  padding: 10px;
+  border: 2px solid #3c466e;
+  background: rgba(10, 12, 30, 0.7);
+  display: grid;
+  gap: 6px;
+}
+
+.hangar-card.active {
+  border-color: #7df9ff;
+  box-shadow: 0 0 10px rgba(125, 249, 255, 0.4);
+}
+
+.hangar-card-title {
+  font-size: 12px;
+  color: #7df9ff;
+}
+
+.hangar-card-sub {
+  font-size: 9px;
+  color: #ffd166;
+}
+
+.hangar-card-trait {
+  font-size: 9px;
+  color: #c8d4e6;
+}
+
+.hangar-card-stats {
+  font-size: 8px;
+  color: #9aff6c;
+}
+
+.hangar-action {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 2px solid #3c466e;
+  background: #0a0d1a;
+  color: #7df9ff;
+  font-size: 9px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.hangar-action:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hangar-upgrades {
+  border: 2px solid #3f4a86;
+  padding: 12px;
+  background: rgba(8, 10, 26, 0.8);
+}
+
+.hangar-upgrade-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.hangar-upgrade-card {
+  border: 2px solid #3c466e;
+  padding: 10px;
+  background: rgba(10, 12, 30, 0.7);
+  display: grid;
+  gap: 6px;
+}
+
+.hangar-upgrade-card.wide {
+  grid-column: span 2;
+}
+
+.hangar-upgrade-title {
+  font-size: 11px;
+  color: #7df9ff;
+}
+
+.hangar-upgrade-sub {
+  font-size: 8px;
+  color: #c8d4e6;
+}
+
+.hangar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hangar-message {
+  min-height: 16px;
+  font-size: 9px;
+  color: #ffd166;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.hangar-message.visible {
+  opacity: 1;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  margin: 16px 0;
+  text-align: left;
 }
 
 @keyframes pausePulse {

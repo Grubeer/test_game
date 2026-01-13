@@ -22,6 +22,7 @@
         <div class="hud">
           <div class="hud-top">
             <div class="hud-block" id="hud-score"></div>
+            <div class="hud-block" id="hud-coins"></div>
             <div class="hud-block hud-center">
               <div id="hud-level"></div>
               <div class="hud-weapon-mini" id="hud-weapon"></div>
@@ -94,7 +95,48 @@
           <button class="difficulty-button" data-difficulty="insane">НЕВЫНОСИМАЯ</button>
         </div>
       </div>
-      <button id="startButton">СТАРТ</button>
+      <button id="startButton">АНГАР</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="hangarOverlay">
+    <div class="panel hangar">
+      <div class="hangar-header">
+        <h2>АНГАР</h2>
+        <div class="hangar-coins" id="hangarCoins">💰 0</div>
+      </div>
+      <div class="hangar-current">
+        <canvas id="hangarShipCanvas" width="140" height="140"></canvas>
+        <div class="hangar-current-info">
+          <div class="hangar-current-name" id="hangarShipName"></div>
+          <div class="hangar-current-class" id="hangarShipClass"></div>
+          <div class="hangar-current-trait" id="hangarShipTrait"></div>
+          <div class="hangar-current-stats" id="hangarShipStats"></div>
+          <div class="hangar-current-power" id="hangarShipPower"></div>
+        </div>
+      </div>
+      <div class="hangar-body">
+        <div class="hangar-column">
+          <h3>Корабли</h3>
+          <div class="hangar-list" id="hangarShips"></div>
+        </div>
+        <div class="hangar-column">
+          <h3>Оружие</h3>
+          <div class="hangar-list" id="hangarWeapons"></div>
+        </div>
+      </div>
+      <div class="hangar-upgrades">
+        <h3>Прокачка</h3>
+        <div class="hangar-upgrade-list" id="hangarUpgrades"></div>
+      </div>
+      <div class="hangar-footer">
+        <div class="hangar-message" id="hangarMessage"></div>
+        <div class="button-row">
+          <button id="hangarReset">СБРОС ПРОГРЕССА</button>
+          <button id="hangarBack">НАЗАД</button>
+          <button id="hangarPlay">ИГРАТЬ</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -126,6 +168,22 @@
         <button id="restart">ИГРАТЬ СНОВА</button>
         <button id="backToMenu">В МЕНЮ</button>
       </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="summaryOverlay">
+    <div class="panel summary">
+      <h2>ИТОГ УРОВНЯ</h2>
+      <p id="summaryLevel"></p>
+      <div class="summary-grid">
+        <div>Монеты за убийства</div>
+        <div id="summaryCoinsKills">0</div>
+        <div>Бонус</div>
+        <div id="summaryCoinsBonus">0</div>
+        <div>Итого</div>
+        <div id="summaryCoinsTotal">0</div>
+      </div>
+      <button id="summaryContinue">ПРОДОЛЖИТЬ</button>
     </div>
   </div>
 
