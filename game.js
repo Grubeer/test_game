@@ -14,6 +14,7 @@ const hudLevel = document.getElementById("hud-level");
 const hudLives = document.getElementById("hud-lives");
 const hudShield = document.getElementById("hud-shield");
 const hudWeapon = document.getElementById("hud-weapon");
+const hudCoins = document.getElementById("hud-coins");
 const levelBanner = document.getElementById("levelBanner");
 const bossBanner = document.getElementById("bossBanner");
 const bossBar = document.getElementById("bossBar");
@@ -41,6 +42,29 @@ const adminPanel = document.getElementById("adminPanel");
 const adminLevelSelect = document.getElementById("adminLevelSelect");
 const adminGoLevelButton = document.getElementById("adminGoLevel");
 const adminResetRunButton = document.getElementById("adminResetRun");
+
+const hangarOverlay = document.getElementById("hangarOverlay");
+const hangarCoins = document.getElementById("hangarCoins");
+const hangarShipCanvas = document.getElementById("hangarShipCanvas");
+const hangarShipName = document.getElementById("hangarShipName");
+const hangarShipClass = document.getElementById("hangarShipClass");
+const hangarShipTrait = document.getElementById("hangarShipTrait");
+const hangarShipStats = document.getElementById("hangarShipStats");
+const hangarShipPower = document.getElementById("hangarShipPower");
+const hangarShips = document.getElementById("hangarShips");
+const hangarWeapons = document.getElementById("hangarWeapons");
+const hangarUpgrades = document.getElementById("hangarUpgrades");
+const hangarMessage = document.getElementById("hangarMessage");
+const hangarBack = document.getElementById("hangarBack");
+const hangarPlay = document.getElementById("hangarPlay");
+const hangarReset = document.getElementById("hangarReset");
+
+const summaryOverlay = document.getElementById("summaryOverlay");
+const summaryLevel = document.getElementById("summaryLevel");
+const summaryCoinsKills = document.getElementById("summaryCoinsKills");
+const summaryCoinsBonus = document.getElementById("summaryCoinsBonus");
+const summaryCoinsTotal = document.getElementById("summaryCoinsTotal");
+const summaryContinue = document.getElementById("summaryContinue");
 
 const statPlayer = document.getElementById("stat-player");
 const statLevel = document.getElementById("stat-level");
@@ -82,9 +106,15 @@ const palette = {
   vignette: "rgba(255, 60, 60, 0.18)",
 };
 
-const playerSkins = [
+const shipCatalog = [
   {
+    id: "scout",
     name: "Скаут",
+    price: 0,
+    rarity: "Обычный",
+    class: "Лёгкий",
+    trait: "Манёвренность: устойчивый разгон",
+    baseStats: { hp: 4, speed: 180, damageMultiplier: 1, fireRateMultiplier: 1, hitboxScale: 1 },
     color: "#b9f1ff",
     accent: "#6ad8ff",
     highlight: "#ffffff",
@@ -93,12 +123,15 @@ const playerSkins = [
     tier: 1,
     width: 30,
     height: 44,
-    speed: 180,
-    fireRate: 2.2,
-    maxHp: 4,
   },
   {
+    id: "falcon",
     name: "Фалькон",
+    price: 120,
+    rarity: "Обычный",
+    class: "Лёгкий",
+    trait: "Оружейник: выше темп",
+    baseStats: { hp: 4, speed: 190, damageMultiplier: 1.05, fireRateMultiplier: 1.06, hitboxScale: 1 },
     color: "#3fd34d",
     accent: "#a7ff6a",
     highlight: "#f5ffd8",
@@ -107,12 +140,15 @@ const playerSkins = [
     tier: 2,
     width: 32,
     height: 46,
-    speed: 190,
-    fireRate: 2.6,
-    maxHp: 4,
   },
   {
+    id: "raptor",
     name: "Раптор",
+    price: 260,
+    rarity: "Необычный",
+    class: "Штурмовик",
+    trait: "Тяжёлый: больше корпуса",
+    baseStats: { hp: 5, speed: 200, damageMultiplier: 1.1, fireRateMultiplier: 1.08, hitboxScale: 1 },
     color: "#2b7de6",
     accent: "#7fd3ff",
     highlight: "#e8f7ff",
@@ -121,12 +157,15 @@ const playerSkins = [
     tier: 3,
     width: 34,
     height: 48,
-    speed: 200,
-    fireRate: 3,
-    maxHp: 5,
   },
   {
+    id: "viper",
     name: "Вайпер",
+    price: 420,
+    rarity: "Редкий",
+    class: "Перехватчик",
+    trait: "Манёвренность: высокая скорость",
+    baseStats: { hp: 5, speed: 210, damageMultiplier: 1.16, fireRateMultiplier: 1.12, hitboxScale: 0.98 },
     color: "#3b3f4a",
     accent: "#f2b942",
     highlight: "#8fd6ff",
@@ -135,12 +174,15 @@ const playerSkins = [
     tier: 4,
     width: 36,
     height: 50,
-    speed: 210,
-    fireRate: 3.4,
-    maxHp: 5,
   },
   {
+    id: "phantom",
     name: "Фантом",
+    price: 680,
+    rarity: "Эпический",
+    class: "Бомбардировщик",
+    trait: "Броня: повышенная живучесть",
+    baseStats: { hp: 6, speed: 225, damageMultiplier: 1.22, fireRateMultiplier: 1.18, hitboxScale: 1.05 },
     color: "#d93b34",
     accent: "#ffffff",
     highlight: "#ffd2d2",
@@ -149,12 +191,15 @@ const playerSkins = [
     tier: 5,
     width: 38,
     height: 52,
-    speed: 225,
-    fireRate: 3.8,
-    maxHp: 6,
   },
   {
+    id: "nova",
     name: "Нова",
+    price: 980,
+    rarity: "Легендарный",
+    class: "Элитный",
+    trait: "Оружейник: максимальный темп",
+    baseStats: { hp: 6, speed: 240, damageMultiplier: 1.32, fireRateMultiplier: 1.28, hitboxScale: 1.08 },
     color: "#5e6e87",
     accent: "#c8d4e6",
     highlight: "#ffffff",
@@ -163,66 +208,88 @@ const playerSkins = [
     tier: 6,
     width: 40,
     height: 54,
-    speed: 240,
-    fireRate: 4.2,
-    maxHp: 6,
   },
 ];
 
-const weaponConfigs = {
+const shipCatalogMap = shipCatalog.reduce((acc, ship) => {
+  acc[ship.id] = ship;
+  return acc;
+}, {});
+
+const weaponCatalog = {
   blaster: {
+    id: "blaster",
     name: "БЛАСТЕР",
     color: "#ffe66d",
+    price: 0,
+    upgradeBaseCost: 80,
     levels: [
       { shots: 1, spread: 0, pierce: 0, speed: 320, damage: 1, fireRate: 3.2, size: 4 },
       { shots: 2, spread: 0.08, pierce: 0, speed: 340, damage: 1, fireRate: 3.6, size: 4 },
       { shots: 3, spread: 0.14, pierce: 1, speed: 360, damage: 1, fireRate: 3.8, size: 4 },
       { shots: 4, spread: 0.2, pierce: 1, speed: 380, damage: 1, fireRate: 4, size: 4 },
       { shots: 5, spread: 0.24, pierce: 2, speed: 390, damage: 1, fireRate: 4.2, size: 4 },
+      { shots: 5, spread: 0.28, pierce: 2, speed: 405, damage: 1, fireRate: 4.4, size: 4 },
     ],
   },
   orbs: {
+    id: "orbs",
     name: "СФЕРЫ",
     color: "#7df9ff",
+    price: 180,
+    upgradeBaseCost: 110,
     levels: [
       { shots: 2, spread: 0.18, pierce: 0, speed: 240, damage: 1, fireRate: 2.4, size: 6 },
       { shots: 3, spread: 0.22, pierce: 0, speed: 250, damage: 1, fireRate: 2.6, size: 6 },
       { shots: 4, spread: 0.26, pierce: 1, speed: 260, damage: 1, fireRate: 2.8, size: 7 },
       { shots: 5, spread: 0.3, pierce: 1, speed: 270, damage: 1, fireRate: 3, size: 7 },
       { shots: 6, spread: 0.34, pierce: 1, speed: 280, damage: 1, fireRate: 3.2, size: 7 },
+      { shots: 6, spread: 0.36, pierce: 2, speed: 290, damage: 1, fireRate: 3.35, size: 7 },
     ],
   },
   laser: {
+    id: "laser",
     name: "ЛАЗЕР",
     color: "#ff7bff",
+    price: 320,
+    upgradeBaseCost: 140,
     levels: [
       { shots: 1, spread: 0, pierce: 2, speed: 520, damage: 1, fireRate: 2.2, size: 5, length: 24 },
       { shots: 1, spread: 0, pierce: 2, speed: 560, damage: 1, fireRate: 2.4, size: 6, length: 26 },
       { shots: 2, spread: 0.08, pierce: 3, speed: 580, damage: 1, fireRate: 2.6, size: 6, length: 28 },
       { shots: 2, spread: 0.1, pierce: 3, speed: 600, damage: 1, fireRate: 2.8, size: 7, length: 30 },
       { shots: 3, spread: 0.12, pierce: 4, speed: 620, damage: 1, fireRate: 3, size: 7, length: 32 },
+      { shots: 3, spread: 0.14, pierce: 4, speed: 640, damage: 1, fireRate: 3.2, size: 7, length: 34 },
     ],
   },
   missile: {
+    id: "missile",
     name: "РАКЕТЫ",
     color: "#ff9f3c",
+    price: 460,
+    upgradeBaseCost: 170,
     levels: [
       { shots: 1, spread: 0, pierce: 0, speed: 240, damage: 2, fireRate: 1.8, size: 6, turnRate: 2.4 },
       { shots: 2, spread: 0.12, pierce: 0, speed: 250, damage: 2, fireRate: 1.9, size: 6, turnRate: 2.6 },
       { shots: 2, spread: 0.16, pierce: 1, speed: 260, damage: 2, fireRate: 2, size: 6, turnRate: 2.8 },
       { shots: 3, spread: 0.18, pierce: 1, speed: 270, damage: 2, fireRate: 2.1, size: 7, turnRate: 3 },
       { shots: 3, spread: 0.2, pierce: 1, speed: 280, damage: 2, fireRate: 2.2, size: 7, turnRate: 3.2 },
+      { shots: 4, spread: 0.22, pierce: 1, speed: 290, damage: 2, fireRate: 2.3, size: 7, turnRate: 3.4 },
     ],
   },
   arc: {
+    id: "arc",
     name: "ДИСК",
     color: "#ffd166",
+    price: 600,
+    upgradeBaseCost: 190,
     levels: [
       { shots: 1, spread: 0, pierce: 1, speed: 260, damage: 2, fireRate: 1.6, size: 10 },
       { shots: 1, spread: 0, pierce: 2, speed: 270, damage: 2, fireRate: 1.7, size: 11 },
       { shots: 2, spread: 0.12, pierce: 2, speed: 280, damage: 2, fireRate: 1.8, size: 11 },
       { shots: 2, spread: 0.16, pierce: 3, speed: 290, damage: 2, fireRate: 1.9, size: 12 },
       { shots: 3, spread: 0.18, pierce: 3, speed: 300, damage: 2, fireRate: 2, size: 12 },
+      { shots: 3, spread: 0.2, pierce: 4, speed: 310, damage: 2, fireRate: 2.1, size: 12 },
     ],
   },
 };
@@ -617,6 +684,50 @@ const difficultySettings = {
   insane: { spawn: 0.86, speed: 1.16, power: 1.15, boss: 1.2, hp: 1.28, damage: 1.2, drop: 0.85, reward: 1.2 },
 };
 
+const coinRewards = {
+  enemies: {
+    scout: 6,
+    shooter: 8,
+    edge: 9,
+    rammer: 10,
+    snake: 10,
+    armor: 14,
+    elite: 18,
+    rock: 4,
+  },
+  levelBonus: {
+    1: 40,
+    2: 48,
+    3: 58,
+    4: 68,
+    5: 80,
+    6: 92,
+    7: 105,
+    8: 120,
+    9: 136,
+    10: 154,
+    11: 172,
+    12: 192,
+    13: 214,
+    14: 238,
+    15: 264,
+  },
+  bossBonus: {
+    1: 120,
+    2: 180,
+    3: 240,
+  },
+};
+
+const shipUpgradeConfig = {
+  damage: { label: "Урон", maxLevel: 10, percentPerLevel: 0.05, baseCost: 90 },
+  hp: { label: "Корпус", maxLevel: 10, percentPerLevel: 0.06, baseCost: 85 },
+  speed: { label: "Скорость", maxLevel: 10, percentPerLevel: 0.04, baseCost: 95 },
+  fireRate: { label: "Темп огня", maxLevel: 10, percentPerLevel: 0.05, baseCost: 100 },
+};
+
+const saveDataKey = "cosmoprado-save";
+
 const state = {
   phase: "start",
   levelIndex: 0,
@@ -653,6 +764,9 @@ const state = {
   difficulty: "medium",
   adminEnabled: false,
   adminBuffer: "",
+  saveData: null,
+  levelCoins: { kills: 0, bonus: 0, total: 0 },
+  levelSummary: null,
   view: {
     x: 0,
     y: 0,
@@ -852,6 +966,7 @@ function initStarfield() {
 }
 
 function resetStats() {
+  const weaponLevel = state.saveData?.weaponUpgrades?.[state.saveData?.selectedWeaponId] || 0;
   state.stats = {
     playerName: state.stats.playerName || "Гость",
     kills: 0,
@@ -863,7 +978,7 @@ function resetStats() {
     boostShield: 0,
     boostHeal: 0,
     boostOther: 0,
-    weaponMax: 1,
+    weaponMax: weaponLevel + 1,
     combo: 0,
     bestCombo: 0,
     shots: 0,
@@ -881,17 +996,6 @@ function getLevelTrack(level) {
 
 function getDifficulty() {
   return difficultySettings[state.difficulty] || difficultySettings.medium;
-}
-
-function getWeaponLevelConfig(type, level) {
-  const config = weaponConfigs[type] || weaponConfigs.blaster;
-  const idx = clamp(level, 0, config.levels.length - 1);
-  return {
-    ...config.levels[idx],
-    name: config.name,
-    color: config.color,
-    maxLevel: config.levels.length - 1,
-  };
 }
 
 function getLevelConfig() {
@@ -933,6 +1037,155 @@ function setDifficulty(value) {
   });
 }
 
+function createDefaultSaveData() {
+  return {
+    version: 2,
+    coins: 0,
+    ownedShips: ["scout"],
+    selectedShipId: "scout",
+    ownedWeapons: ["blaster"],
+    selectedWeaponId: "blaster",
+    shipUpgrades: { damage: 0, hp: 0, speed: 0, fireRate: 0 },
+    weaponUpgrades: { blaster: 0 },
+  };
+}
+
+function migrateLegacySaveData(data) {
+  if (!data || typeof data !== "object") return createDefaultSaveData();
+  const migrated = createDefaultSaveData();
+  if (typeof data.coins === "number") migrated.coins = data.coins;
+  if (Array.isArray(data.ownedShips)) migrated.ownedShips = data.ownedShips;
+  if (typeof data.selectedShipId === "string") migrated.selectedShipId = data.selectedShipId;
+  if (Array.isArray(data.ownedWeapons)) migrated.ownedWeapons = data.ownedWeapons;
+  if (typeof data.selectedWeaponId === "string") migrated.selectedWeaponId = data.selectedWeaponId;
+  if (data.shipUpgrades && typeof data.shipUpgrades === "object") {
+    migrated.shipUpgrades = { ...migrated.shipUpgrades, ...data.shipUpgrades };
+  }
+  if (data.weaponUpgrades && typeof data.weaponUpgrades === "object") {
+    migrated.weaponUpgrades = { ...migrated.weaponUpgrades, ...data.weaponUpgrades };
+  }
+  const legacyWeaponLevel = Number(
+    data.weaponLevel ?? data.weapon?.level ?? data.weaponUpgradeLevel ?? 0
+  );
+  if (legacyWeaponLevel > 0) {
+    migrated.coins += Math.round(legacyWeaponLevel * 40);
+  }
+  const legacyWeaponType = data.weaponType ?? data.weapon?.type;
+  if (legacyWeaponType && weaponCatalog[legacyWeaponType]) {
+    migrated.ownedWeapons = Array.from(new Set(migrated.ownedWeapons.concat(legacyWeaponType)));
+    migrated.selectedWeaponId = legacyWeaponType;
+  }
+  return migrated;
+}
+
+function normalizeSaveData(data) {
+  const normalized = migrateLegacySaveData(data);
+  normalized.ownedShips = normalized.ownedShips.filter((id) => shipCatalogMap[id]);
+  if (!normalized.ownedShips.length) normalized.ownedShips = ["scout"];
+  if (!shipCatalogMap[normalized.selectedShipId]) {
+    normalized.selectedShipId = normalized.ownedShips[0];
+  }
+  normalized.ownedWeapons = normalized.ownedWeapons.filter((id) => weaponCatalog[id]);
+  if (!normalized.ownedWeapons.length) normalized.ownedWeapons = ["blaster"];
+  if (!weaponCatalog[normalized.selectedWeaponId]) {
+    normalized.selectedWeaponId = normalized.ownedWeapons[0];
+  }
+  Object.keys(shipUpgradeConfig).forEach((key) => {
+    const current = Number(normalized.shipUpgrades?.[key] ?? 0);
+    const max = shipUpgradeConfig[key].maxLevel;
+    normalized.shipUpgrades[key] = clamp(current, 0, max);
+  });
+  normalized.weaponUpgrades = normalized.weaponUpgrades || {};
+  Object.keys(weaponCatalog).forEach((weaponId) => {
+    const max = weaponCatalog[weaponId].levels.length - 1;
+    const current = Number(normalized.weaponUpgrades[weaponId] ?? 0);
+    normalized.weaponUpgrades[weaponId] = clamp(current, 0, max);
+  });
+  return normalized;
+}
+
+function loadSaveData() {
+  try {
+    const raw = localStorage.getItem(saveDataKey);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return normalizeSaveData(parsed);
+  } catch (error) {
+    return createDefaultSaveData();
+  }
+}
+
+function saveGameData() {
+  if (!state.saveData) return;
+  localStorage.setItem(saveDataKey, JSON.stringify(state.saveData));
+}
+
+function grantCoins(amount) {
+  if (!state.saveData || amount <= 0) return;
+  state.saveData.coins = Math.max(0, Math.floor(state.saveData.coins + amount));
+}
+
+function addCoinReward(amount, bucket = "kills") {
+  const reward = Math.max(0, Math.round(amount));
+  if (reward <= 0) return;
+  state.levelCoins[bucket] = (state.levelCoins[bucket] || 0) + reward;
+  state.levelCoins.total += reward;
+  grantCoins(reward);
+  saveGameData();
+}
+
+function resetLevelCoins() {
+  state.levelCoins = { kills: 0, bonus: 0, total: 0 };
+}
+
+function getShipUpgradeCost(key, level) {
+  const config = shipUpgradeConfig[key];
+  const base = config.baseCost;
+  return Math.round(base * Math.pow(level + 1, 1.45));
+}
+
+function getWeaponUpgradeCost(weaponId, level) {
+  const weapon = weaponCatalog[weaponId];
+  if (!weapon) return 0;
+  return Math.round(weapon.upgradeBaseCost * Math.pow(level + 1, 1.4));
+}
+
+function getShipStats(shipId, upgrades) {
+  const ship = shipCatalogMap[shipId] || shipCatalog[0];
+  const damageLevel = upgrades.damage || 0;
+  const hpLevel = upgrades.hp || 0;
+  const speedLevel = upgrades.speed || 0;
+  const fireRateLevel = upgrades.fireRate || 0;
+  const damageMultiplier = ship.baseStats.damageMultiplier * (1 + damageLevel * shipUpgradeConfig.damage.percentPerLevel);
+  const fireRateMultiplier = ship.baseStats.fireRateMultiplier * (1 + fireRateLevel * shipUpgradeConfig.fireRate.percentPerLevel);
+  const speed = ship.baseStats.speed * (1 + speedLevel * shipUpgradeConfig.speed.percentPerLevel);
+  const maxHp = Math.round(ship.baseStats.hp * (1 + hpLevel * shipUpgradeConfig.hp.percentPerLevel));
+  return {
+    ship,
+    damageMultiplier,
+    fireRateMultiplier,
+    speed,
+    maxHp,
+    hitboxScale: ship.baseStats.hitboxScale,
+  };
+}
+
+function getWeaponLevelConfig(type, level) {
+  const config = weaponCatalog[type] || weaponCatalog.blaster;
+  const idx = clamp(level, 0, config.levels.length - 1);
+  return {
+    ...config.levels[idx],
+    name: config.name,
+    color: config.color,
+    maxLevel: config.levels.length - 1,
+  };
+}
+
+function getPowerRating(shipStats, weaponStats) {
+  const base = shipStats.maxHp * 12 + shipStats.speed * 0.25;
+  const dmg = weaponStats.damage * weaponStats.shots * shipStats.damageMultiplier * 18;
+  return Math.round(base + dmg + shipStats.fireRateMultiplier * 60);
+}
+
 function updateAdminPanelVisibility() {
   if (state.adminEnabled && state.phase === "pause") {
     adminPanel.classList.remove("hidden");
@@ -945,6 +1198,136 @@ function populateAdminLevels() {
   adminLevelSelect.innerHTML = levelConfigs
     .map((level, index) => `<option value="${index}">УРОВЕНЬ ${level.level}</option>`)
     .join("");
+}
+
+function showHangarMessage(text) {
+  if (!hangarMessage) return;
+  hangarMessage.textContent = text;
+  hangarMessage.classList.add("visible");
+  setTimeout(() => {
+    hangarMessage.classList.remove("visible");
+  }, 1600);
+}
+
+function renderHangar() {
+  if (!state.saveData) return;
+  const saveData = state.saveData;
+  const shipStats = getShipStats(saveData.selectedShipId, saveData.shipUpgrades);
+  const weaponLevel = saveData.weaponUpgrades[saveData.selectedWeaponId] || 0;
+  const weaponStats = getWeaponLevelConfig(saveData.selectedWeaponId, weaponLevel);
+  if (hangarCoins) {
+    hangarCoins.textContent = `💰 ${saveData.coins}`;
+  }
+  drawHangarShipPreview(shipStats.ship);
+  hangarShipName.textContent = shipStats.ship.name;
+  hangarShipClass.textContent = `${shipStats.ship.rarity} · ${shipStats.ship.class}`;
+  hangarShipTrait.textContent = shipStats.ship.trait;
+  hangarShipStats.innerHTML = `
+    <div>HP: ${shipStats.maxHp}</div>
+    <div>Скорость: ${Math.round(shipStats.speed)}</div>
+    <div>Урон: x${shipStats.damageMultiplier.toFixed(2)}</div>
+    <div>Огонь: x${shipStats.fireRateMultiplier.toFixed(2)}</div>
+  `;
+  hangarShipPower.textContent = `Мощь: ${getPowerRating(shipStats, weaponStats)}`;
+
+  hangarShips.innerHTML = shipCatalog
+    .map((ship) => {
+      const owned = saveData.ownedShips.includes(ship.id);
+      const selected = saveData.selectedShipId === ship.id;
+      const actionLabel = selected ? "ВЫБРАН" : owned ? "ВЫБРАТЬ" : `КУПИТЬ · ${ship.price}`;
+      return `
+        <div class="hangar-card ${selected ? "active" : ""}">
+          <div class="hangar-card-title">${ship.name}</div>
+          <div class="hangar-card-sub">${ship.rarity} · ${ship.class}</div>
+          <div class="hangar-card-trait">${ship.trait}</div>
+          <div class="hangar-card-stats">HP ${ship.baseStats.hp} · SPD ${Math.round(ship.baseStats.speed)}</div>
+          <button class="hangar-action" data-action="${owned ? "select-ship" : "buy-ship"}" data-ship-id="${ship.id}" ${selected ? "disabled" : ""}>
+            ${actionLabel}
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
+  hangarWeapons.innerHTML = Object.values(weaponCatalog)
+    .map((weapon) => {
+      const owned = saveData.ownedWeapons.includes(weapon.id);
+      const selected = saveData.selectedWeaponId === weapon.id;
+      const actionLabel = selected ? "ВЫБРАНО" : owned ? "ВЫБРАТЬ" : `КУПИТЬ · ${weapon.price}`;
+      const currentLevel = saveData.weaponUpgrades[weapon.id] || 0;
+      return `
+        <div class="hangar-card ${selected ? "active" : ""}">
+          <div class="hangar-card-title">${weapon.name}</div>
+          <div class="hangar-card-sub">Уровень ${currentLevel + 1}/${weapon.levels.length}</div>
+          <div class="hangar-card-stats">DMG ${weapon.levels[0].damage} · CD ${weapon.levels[0].fireRate}</div>
+          <button class="hangar-action" data-action="${owned ? "select-weapon" : "buy-weapon"}" data-weapon-id="${weapon.id}" ${selected ? "disabled" : ""}>
+            ${actionLabel}
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
+  const shipUpgradeHtml = Object.entries(shipUpgradeConfig)
+    .map(([key, config]) => {
+      const level = saveData.shipUpgrades[key] || 0;
+      const max = config.maxLevel;
+      const nextCost = level < max ? getShipUpgradeCost(key, level) : null;
+      const gainLabel = `+${Math.round(config.percentPerLevel * 100)}%`;
+      return `
+        <div class="hangar-upgrade-card">
+          <div class="hangar-upgrade-title">${config.label}</div>
+          <div class="hangar-upgrade-sub">Уровень ${level}/${max}</div>
+          <div class="hangar-upgrade-sub">След. бонус ${gainLabel}</div>
+          <button class="hangar-action" data-action="upgrade-ship" data-upgrade-key="${key}" ${level >= max ? "disabled" : ""}>
+            ${level >= max ? "МАКС" : `АПГРЕЙД · ${nextCost}`}
+          </button>
+        </div>
+      `;
+    })
+    .join("");
+
+  const weaponUpgradeHtml = (() => {
+    const weaponId = saveData.selectedWeaponId;
+    const weapon = weaponCatalog[weaponId];
+    if (!weapon) return "";
+    const level = saveData.weaponUpgrades[weaponId] || 0;
+    const max = weapon.levels.length - 1;
+    const nextCost = level < max ? getWeaponUpgradeCost(weaponId, level) : null;
+    const current = weapon.levels[level];
+    const next = weapon.levels[Math.min(level + 1, max)];
+    const upgradeDelta = level < max
+      ? `DMG ${next.damage - current.damage >= 0 ? "+" : ""}${(next.damage - current.damage).toFixed(1)} · SHOTS ${next.shots - current.shots >= 0 ? "+" : ""}${next.shots - current.shots}`
+      : "МАКС. УРОВЕНЬ";
+    return `
+      <div class="hangar-upgrade-card wide">
+        <div class="hangar-upgrade-title">Оружие: ${weapon.name}</div>
+        <div class="hangar-upgrade-sub">Уровень ${level + 1}/${weapon.levels.length}</div>
+        <div class="hangar-upgrade-sub">${upgradeDelta}</div>
+        <button class="hangar-action" data-action="upgrade-weapon" data-weapon-id="${weaponId}" ${level >= max ? "disabled" : ""}>
+          ${level >= max ? "МАКС" : `АПГРЕЙД · ${nextCost}`}
+        </button>
+      </div>
+    `;
+  })();
+
+  hangarUpgrades.innerHTML = shipUpgradeHtml + weaponUpgradeHtml;
+}
+
+function openHangar() {
+  state.phase = "hangar";
+  startOverlay.classList.add("hidden");
+  endOverlay.classList.add("hidden");
+  pauseOverlay.classList.add("hidden");
+  hangarOverlay.classList.remove("hidden");
+  renderHangar();
+  if (state.audio) {
+    switchMusic("menu");
+  }
+}
+
+function closeHangar() {
+  hangarOverlay.classList.add("hidden");
 }
 
 function pickBossName() {
@@ -969,25 +1352,31 @@ function handleAdminCodeInput(key, target) {
 }
 
 function buildPlayerForLevel({ preserveProgress }) {
-  const skin = playerSkins[state.levelIndex] || playerSkins[playerSkins.length - 1];
+  const saveData = state.saveData || createDefaultSaveData();
   const prev = state.player;
-  const weapon = preserveProgress && prev ? prev.weapon : { type: "blaster", level: 0 };
-  const hp = preserveProgress && prev ? Math.min(prev.hp, skin.maxHp) : skin.maxHp;
+  const shipStats = getShipStats(saveData.selectedShipId, saveData.shipUpgrades);
+  const weaponType = saveData.selectedWeaponId;
+  const weaponLevel = saveData.weaponUpgrades[weaponType] || 0;
+  const weapon = preserveProgress && prev ? prev.weapon : { type: weaponType, level: weaponLevel };
+  const hitboxScale = shipStats.hitboxScale || 1;
+  const hp = preserveProgress && prev ? Math.min(prev.hp, shipStats.maxHp) : shipStats.maxHp;
   const shield = preserveProgress && prev ? prev.shield : 0;
   state.player = {
     x: GAME_WIDTH / 2,
     y: GAME_HEIGHT * 0.75,
-    width: skin.width,
-    height: skin.height,
-    speed: skin.speed,
-    baseFireRate: skin.fireRate,
+    width: shipStats.ship.width * hitboxScale,
+    height: shipStats.ship.height * hitboxScale,
+    speed: shipStats.speed,
+    baseFireRate: 3 * shipStats.fireRateMultiplier,
     hp,
-    maxHp: skin.maxHp,
+    maxHp: shipStats.maxHp,
     shield,
     weapon,
-    skin,
+    damageMultiplier: shipStats.damageMultiplier,
+    skin: shipStats.ship,
     invuln: 0,
   };
+  state.stats.weaponMax = Math.max(state.stats.weaponMax, weapon.level + 1);
 }
 
 function resetLevel() {
@@ -1009,6 +1398,7 @@ function resetLevel() {
   state.bossBannerTimer = 0;
   bossBar.classList.remove("visible");
   bossBanner.classList.add("hidden");
+  resetLevelCoins();
   buildPlayerForLevel({ preserveProgress: true });
   showLevelBanner();
   playSfx("level");
@@ -1059,8 +1449,6 @@ function startBossFight() {
   bossNameLabel.textContent = state.boss.name;
   bossHealthFill.style.width = "100%";
   spawnPowerup(GAME_WIDTH * 0.3, -10, "shield");
-  const weaponDrop = randomPowerupKind();
-  spawnPowerup(GAME_WIDTH * 0.7, -10, "weapon", weaponDrop.weaponType || "blaster");
   playBossIntro();
   setTimeout(() => switchMusic("boss"), 900);
 }
@@ -1074,6 +1462,57 @@ function hideLevelBanner() {
   levelBanner.classList.add("hidden");
 }
 
+function showSummaryOverlay() {
+  if (!state.levelSummary) return;
+  summaryLevel.textContent = `УРОВЕНЬ ${state.levelSummary.level}`;
+  summaryCoinsKills.textContent = `${state.levelSummary.kills}`;
+  summaryCoinsBonus.textContent = `${state.levelSummary.bonus}`;
+  summaryCoinsTotal.textContent = `${state.levelSummary.total}`;
+  summaryOverlay.classList.remove("hidden");
+}
+
+function hideSummaryOverlay() {
+  summaryOverlay.classList.add("hidden");
+}
+
+function triggerLevelSummary({ bossDefeated, finalLevel }) {
+  const levelNumber = levelConfigs[state.levelIndex].level;
+  const diff = getDifficulty();
+  const levelBonus = (coinRewards.levelBonus[levelNumber] || 0) * diff.reward;
+  let bonusReward = levelBonus;
+  if (bossDefeated) {
+    const bossTier = Math.max(1, Math.floor(levelNumber / 5));
+    bonusReward += (coinRewards.bossBonus[bossTier] || coinRewards.bossBonus[3] || 0) * diff.reward;
+  }
+  if (bonusReward > 0) {
+    addCoinReward(bonusReward, "bonus");
+  }
+  state.levelSummary = {
+    level: levelNumber,
+    kills: state.levelCoins.kills,
+    bonus: state.levelCoins.bonus,
+    total: state.levelCoins.total,
+    finalLevel,
+  };
+  state.phase = "summary";
+  showSummaryOverlay();
+}
+
+function continueAfterSummary() {
+  if (!state.levelSummary) return;
+  const { finalLevel } = state.levelSummary;
+  hideSummaryOverlay();
+  state.levelSummary = null;
+  if (finalLevel) {
+    endGame(true);
+    return;
+  }
+  state.levelIndex += 1;
+  resetLevel();
+  switchMusic(getLevelTrack(levelConfigs[state.levelIndex].level));
+  state.phase = "play";
+}
+
 function startGame() {
   state.phase = "play";
   state.score = 0;
@@ -1083,12 +1522,15 @@ function startGame() {
   startOverlay.classList.add("hidden");
   endOverlay.classList.add("hidden");
   pauseOverlay.classList.add("hidden");
+  hideSummaryOverlay();
+  state.levelSummary = null;
   saveResultButton.disabled = false;
   saveResultButton.textContent = "СОХРАНИТЬ РЕЗУЛЬТАТ";
   playerNameInput.disabled = false;
   resetStats();
   state.player = null;
   resetLevel();
+  playerNameInput.value = state.stats.playerName || "";
   initAudio();
   switchMusic(getLevelTrack(levelConfigs[state.levelIndex].level));
 }
@@ -1382,12 +1824,11 @@ function spawnEnemyBullet(enemy, angleOffset = 0, speedBoost = 0, options = {}) 
   });
 }
 
-function spawnPowerup(x, y, kind, weaponType = null) {
+function spawnPowerup(x, y, kind) {
   state.powerups.push({
     x,
     y,
     kind,
-    weaponType,
     width: 18,
     height: 18,
     speed: 60,
@@ -1465,7 +1906,7 @@ function handlePlayerInput(dt, now) {
         pierce: weapon.pierce || 0,
         speed: weapon.speed,
         size: weapon.size,
-        damage: weapon.damage,
+        damage: weapon.damage * state.player.damageMultiplier,
         kind: weaponState.type,
         length: weapon.length || 12,
         turnRate: weapon.turnRate || 0,
@@ -2024,10 +2465,14 @@ function handleCollisions() {
           state.stats.bestCombo = Math.max(state.stats.bestCombo, state.stats.combo);
           state.screenShake = 6;
           spawnEffect(enemy.x, enemy.y, "+ОЧКИ", "#9aff6c");
+          const coinBase = coinRewards.enemies[enemy.type.id] || 6;
+          const coinReward = coinBase * (level.rewardScale || 1);
+          addCoinReward(coinReward, "kills");
+          spawnEffect(enemy.x, enemy.y + 14, "+💰", "#ffd166");
           spawnExplosion(enemy.x, enemy.y, "#ff9b4b");
           if (Math.random() < (enemy.type.dropChance || 0.3) * (level.dropScale || 1)) {
             const drop = randomPowerupKind();
-            spawnPowerup(enemy.x, enemy.y, drop.kind, drop.weaponType);
+            spawnPowerup(enemy.x, enemy.y, drop.kind);
           }
           playSfx("boom");
         }
@@ -2073,13 +2518,8 @@ function handleCollisions() {
       playSfx("win");
       bossBar.classList.remove("visible");
       state.boss = null;
-      if (state.levelIndex >= levelConfigs.length - 1) {
-        endGame(true);
-      } else {
-        state.levelIndex += 1;
-        resetLevel();
-        switchMusic(getLevelTrack(levelConfigs[state.levelIndex].level));
-      }
+      const finalLevel = state.levelIndex >= levelConfigs.length - 1;
+      triggerLevelSummary({ bossDefeated: true, finalLevel });
     }
   }
 
@@ -2120,7 +2560,7 @@ function handleCollisions() {
 
   state.powerups = state.powerups.filter((power) => {
     if (intersects(power, state.player)) {
-      collectPowerup(power.kind, power.weaponType);
+      collectPowerup(power.kind);
       return false;
     }
     return true;
@@ -2162,37 +2602,16 @@ function applyMissPenalty() {
 }
 
 function randomPowerupKind() {
-  const weaponTypes = Object.keys(weaponConfigs);
   const roll = Math.random();
-  if (roll < 0.34) {
-    return { kind: "weapon", weaponType: weaponTypes[Math.floor(rand(0, weaponTypes.length))] };
-  }
-  if (roll < 0.55) return { kind: "shield" };
-  if (roll < 0.7) return { kind: "heal" };
-  if (roll < 0.85) return { kind: "score" };
+  if (roll < 0.4) return { kind: "shield" };
+  if (roll < 0.6) return { kind: "heal" };
+  if (roll < 0.8) return { kind: "score" };
   return { kind: "slow" };
 }
 
-function collectPowerup(kind, weaponType) {
+function collectPowerup(kind) {
   state.stats.boosts += 1;
-  if (kind === "weapon") {
-    const currentType = state.player.weapon.type;
-    if (weaponType && weaponType !== currentType) {
-      state.player.weapon = { type: weaponType, level: 0 };
-      spawnEffect(state.player.x, state.player.y - 20, `ОРУЖИЕ: ${weaponConfigs[weaponType].name}`, "#ffd166");
-    } else {
-      const config = weaponConfigs[currentType] || weaponConfigs.blaster;
-      const nextLevel = Math.min(config.levels.length - 1, state.player.weapon.level + 1);
-      state.player.weapon.level = nextLevel;
-      spawnEffect(state.player.x, state.player.y - 20, "ОРУЖИЕ +", "#ffd166");
-    }
-    const weaponLevel = state.player.weapon.level + 1;
-    state.stats.weaponMax = Math.max(state.stats.weaponMax, weaponLevel);
-    state.stats.boostWeapon += 1;
-    hudWeapon.classList.add("glow");
-    setTimeout(() => hudWeapon.classList.remove("glow"), 600);
-    playSfx("weapon");
-  } else if (kind === "shield") {
+  if (kind === "shield") {
     state.player.shield = Math.min(3, state.player.shield + 1);
     state.stats.boostShield += 1;
     spawnEffect(state.player.x, state.player.y - 20, "ЩИТ +", "#6ce1ff");
@@ -2241,13 +2660,8 @@ function updateLevel(dt) {
   }
   const level = levelConfigs[state.levelIndex];
   if (state.levelTimer >= level.duration) {
-    if (state.levelIndex >= levelConfigs.length - 1) {
-      endGame(true);
-    } else {
-      state.levelIndex += 1;
-      resetLevel();
-      switchMusic(getLevelTrack(levelConfigs[state.levelIndex].level));
-    }
+    const finalLevel = state.levelIndex >= levelConfigs.length - 1;
+    triggerLevelSummary({ bossDefeated: false, finalLevel });
   }
 }
 
@@ -2270,13 +2684,14 @@ function drawStarfield() {
   ctx.globalAlpha = 1;
 }
 
-function drawPixelShip({ x, y, skin }) {
+function drawPixelShip({ x, y, skin, targetCtx }) {
   const unit = 2;
+  const context = targetCtx || ctx;
   const drawBlocks = (blocks, color) => {
     if (!blocks.length) return;
-    ctx.fillStyle = color;
+    context.fillStyle = color;
     blocks.forEach(([bx, by, bw, bh]) => {
-      ctx.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
+      context.fillRect(x + bx * unit, y + by * unit, bw * unit, bh * unit);
     });
   };
 
@@ -2476,6 +2891,19 @@ function drawPlayer() {
     ctx.arc(x, y, width, 0, Math.PI * 2);
     ctx.stroke();
   }
+}
+
+function drawHangarShipPreview(ship) {
+  if (!hangarShipCanvas || !ship) return;
+  const previewCtx = hangarShipCanvas.getContext("2d");
+  if (!previewCtx) return;
+  previewCtx.imageSmoothingEnabled = false;
+  previewCtx.clearRect(0, 0, hangarShipCanvas.width, hangarShipCanvas.height);
+  previewCtx.fillStyle = "#0b0d1f";
+  previewCtx.fillRect(0, 0, hangarShipCanvas.width, hangarShipCanvas.height);
+  const centerX = hangarShipCanvas.width / 2;
+  const centerY = hangarShipCanvas.height / 2 + 8;
+  drawPixelShip({ x: centerX, y: centerY, skin: ship, targetCtx: previewCtx });
 }
 
 function drawPixelEnemy({ x, y, type }) {
@@ -2725,31 +3153,18 @@ function drawLasers() {
 function drawPowerups() {
   state.powerups.forEach((power) => {
     const labelMap = {
-      weapon: "⚡",
       shield: "Щ",
       heal: "+",
       score: "★",
       slow: "З",
     };
-    const weaponLabelMap = {
-      blaster: "Б",
-      orbs: "О",
-      laser: "Л",
-      missile: "Р",
-      arc: "Д",
-    };
-    if (power.kind === "weapon" && power.weaponType) {
-      ctx.fillStyle = weaponConfigs[power.weaponType]?.color || palette.power;
-    } else {
-      ctx.fillStyle = power.kind === "weapon" ? palette.power : palette.heal;
-    }
+    ctx.fillStyle = palette.heal;
     if (power.kind === "shield") ctx.fillStyle = palette.shield;
     if (power.kind === "score") ctx.fillStyle = "#ffd166";
     if (power.kind === "slow") ctx.fillStyle = "#b88bff";
     ctx.fillRect(power.x - power.width / 2, power.y - power.height / 2, power.width, power.height);
     ctx.fillStyle = "#111";
-    const label = power.kind === "weapon" ? weaponLabelMap[power.weaponType] || labelMap.weapon : labelMap[power.kind];
-    ctx.fillText(label || "?", power.x - 4, power.y + 4);
+    ctx.fillText(labelMap[power.kind] || "?", power.x - 4, power.y + 4);
   });
 }
 
@@ -2776,9 +3191,13 @@ function drawHUD() {
   hudLives.textContent = `❤ ЗДОРОВЬЕ ${hpBlocks}`;
   hudShield.textContent = `🛡 ЩИТ ${shieldBlocks}`;
   hudScore.textContent = `★ ОЧКИ ${state.score}`;
+  if (hudCoins) {
+    hudCoins.textContent = `💰 ${state.saveData?.coins ?? 0}`;
+  }
   hudLevel.textContent = `🏁 УРОВЕНЬ ${levelConfigs[state.levelIndex].level}/${levelConfigs.length}`;
   const weapon = getWeaponLevelConfig(state.player.weapon.type, state.player.weapon.level);
-  hudWeapon.textContent = `🔫 ${weapon.name} ${state.player.weapon.level + 1}/${weapon.maxLevel + 1}`;
+  const shipLabel = state.player?.skin?.name || "КОРАБЛЬ";
+  hudWeapon.textContent = `🚀 ${shipLabel} · 🔫 ${weapon.name} ${state.player.weapon.level + 1}/${weapon.maxLevel + 1}`;
 }
 
 function drawScreen() {
@@ -2927,7 +3346,7 @@ function gameLoop(now) {
       if (state.time - state.lastPower > level.powerRate) {
         state.lastPower = state.time;
         const drop = randomPowerupKind();
-        spawnPowerup(rand(40, GAME_WIDTH - 40), -20, drop.kind, drop.weaponType);
+        spawnPowerup(rand(40, GAME_WIDTH - 40), -20, drop.kind);
       }
     }
   }
@@ -3043,8 +3462,7 @@ pauseOverlay.addEventListener("click", (event) => {
 });
 
 startButton.addEventListener("click", () => {
-  startGame();
-  playerNameInput.value = state.stats.playerName || "";
+  openHangar();
 });
 
 restartButton.addEventListener("click", startGame);
@@ -3060,6 +3478,121 @@ backToMenuButton.addEventListener("click", () => {
   if (state.audio) {
     switchMusic("menu");
   }
+});
+
+hangarBack.addEventListener("click", () => {
+  closeHangar();
+  startOverlay.classList.remove("hidden");
+  state.phase = "start";
+});
+
+hangarPlay.addEventListener("click", () => {
+  closeHangar();
+  startGame();
+});
+
+hangarReset.addEventListener("click", () => {
+  if (!confirm("Сбросить прогресс? Это удалит все покупки и монеты.")) return;
+  state.saveData = createDefaultSaveData();
+  saveGameData();
+  renderHangar();
+  showHangarMessage("Прогресс сброшен.");
+});
+
+hangarShips.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const shipId = button.dataset.shipId;
+  const ship = shipCatalogMap[shipId];
+  if (!ship || !state.saveData) return;
+  if (button.dataset.action === "buy-ship") {
+    if (state.saveData.coins < ship.price) {
+      showHangarMessage("Недостаточно монет.");
+      return;
+    }
+    state.saveData.coins -= ship.price;
+    state.saveData.ownedShips = Array.from(new Set(state.saveData.ownedShips.concat(shipId)));
+    state.saveData.selectedShipId = shipId;
+    saveGameData();
+    playSfx("bonus");
+    showHangarMessage(`Корабль ${ship.name} куплен.`);
+  } else if (button.dataset.action === "select-ship") {
+    state.saveData.selectedShipId = shipId;
+    saveGameData();
+    playSfx("bonus");
+  }
+  renderHangar();
+});
+
+hangarWeapons.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const weaponId = button.dataset.weaponId;
+  const weapon = weaponCatalog[weaponId];
+  if (!weapon || !state.saveData) return;
+  if (button.dataset.action === "buy-weapon") {
+    if (state.saveData.coins < weapon.price) {
+      showHangarMessage("Недостаточно монет.");
+      return;
+    }
+    state.saveData.coins -= weapon.price;
+    state.saveData.ownedWeapons = Array.from(new Set(state.saveData.ownedWeapons.concat(weaponId)));
+    state.saveData.selectedWeaponId = weaponId;
+    saveGameData();
+    playSfx("bonus");
+    showHangarMessage(`Оружие ${weapon.name} куплено.`);
+  } else if (button.dataset.action === "select-weapon") {
+    state.saveData.selectedWeaponId = weaponId;
+    saveGameData();
+    playSfx("bonus");
+  }
+  renderHangar();
+});
+
+hangarUpgrades.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button || !state.saveData) return;
+  const action = button.dataset.action;
+  if (action === "upgrade-ship") {
+    const key = button.dataset.upgradeKey;
+    const config = shipUpgradeConfig[key];
+    if (!config) return;
+    const level = state.saveData.shipUpgrades[key] || 0;
+    if (level >= config.maxLevel) return;
+    const cost = getShipUpgradeCost(key, level);
+    if (state.saveData.coins < cost) {
+      showHangarMessage("Недостаточно монет.");
+      return;
+    }
+    state.saveData.coins -= cost;
+    state.saveData.shipUpgrades[key] = level + 1;
+    saveGameData();
+    playSfx("bonus");
+    showHangarMessage(`Апгрейд ${config.label} улучшен.`);
+  }
+  if (action === "upgrade-weapon") {
+    const weaponId = button.dataset.weaponId;
+    const weapon = weaponCatalog[weaponId];
+    if (!weapon) return;
+    const level = state.saveData.weaponUpgrades[weaponId] || 0;
+    const max = weapon.levels.length - 1;
+    if (level >= max) return;
+    const cost = getWeaponUpgradeCost(weaponId, level);
+    if (state.saveData.coins < cost) {
+      showHangarMessage("Недостаточно монет.");
+      return;
+    }
+    state.saveData.coins -= cost;
+    state.saveData.weaponUpgrades[weaponId] = level + 1;
+    saveGameData();
+    playSfx("bonus");
+    showHangarMessage(`Оружие ${weapon.name} усилено.`);
+  }
+  renderHangar();
+});
+
+summaryContinue.addEventListener("click", () => {
+  continueAfterSummary();
 });
 
 playerNameInput.addEventListener("keydown", (event) => {
@@ -3085,13 +3618,15 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+state.saveData = loadSaveData();
+saveGameData();
 setSound(state.soundOn);
 setDifficulty(state.difficulty);
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 initStarfield();
-buildPlayerForLevel({ preserveProgress: false });
 resetStats();
+buildPlayerForLevel({ preserveProgress: false });
 renderLeaderboard();
 populateAdminLevels();
 updateStatsPanel();
