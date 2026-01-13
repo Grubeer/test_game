@@ -201,20 +201,41 @@ canvas {
 }
 
 .boss-bar {
+  position: absolute;
+  top: 12px;
+  left: 30px;
+  right: 30px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-  padding: 4px 6px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 6px;
   border: 2px solid #7b4bff;
   background: rgba(12, 10, 24, 0.9);
   font-size: 8px;
   color: #ffb3ff;
   text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+  z-index: 4;
 }
 
-.boss-bar.hidden {
-  display: none;
+.boss-bar.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.boss-bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  letter-spacing: 1px;
+}
+
+.boss-title {
+  color: #ff7bff;
+  text-shadow: 0 0 6px rgba(255, 179, 255, 0.6);
 }
 
 .boss-health {
@@ -228,6 +249,65 @@ canvas {
   height: 100%;
   width: 100%;
   background: linear-gradient(90deg, #ff5bff 0%, #ffb3ff 100%);
+}
+
+.admin-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border: 2px solid #4b57a4;
+  background: rgba(8, 12, 28, 0.9);
+  border-radius: 10px;
+  font-size: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-transform: uppercase;
+}
+
+.admin-panel.hidden {
+  display: none;
+}
+
+.admin-title {
+  text-align: center;
+  color: #ffd166;
+  text-shadow: 0 0 6px rgba(255, 209, 102, 0.6);
+}
+
+.admin-label {
+  font-size: 8px;
+}
+
+.admin-select {
+  width: 100%;
+  padding: 6px;
+  background: #0a0d1a;
+  color: #f7f7f2;
+  border: 2px solid #3c466e;
+  font-family: inherit;
+  font-size: 9px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-button {
+  margin-top: 0;
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 9px;
+  background: #7df9ff;
+  color: #071516;
+  border: 2px solid #3c466e;
+  box-shadow: 0 0 8px rgba(125, 249, 255, 0.5);
+}
+
+.admin-button.admin-reset {
+  background: #ff9f3c;
+  border-color: #b56512;
+  box-shadow: 0 0 8px rgba(255, 159, 60, 0.5);
 }
 
 .hud-block.flash {

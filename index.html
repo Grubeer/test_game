@@ -15,6 +15,15 @@
         <div class="screen-glow"></div>
         <div class="boss-banner hidden" id="bossBanner">БОСС: Roberto_Prado</div>
         <div class="level-banner hidden" id="levelBanner">УРОВЕНЬ 1</div>
+        <div class="boss-bar" id="bossBar">
+          <div class="boss-bar-label">
+            <span class="boss-title">БОСС</span>
+            <span id="bossName"></span>
+          </div>
+          <div class="boss-health">
+            <div class="boss-health-fill" id="bossHealthFill"></div>
+          </div>
+        </div>
         <div class="hud">
           <div class="hud-top">
             <div class="hud-block" id="hud-score"></div>
@@ -31,12 +40,6 @@
           <div class="hud-bottom">
             <div class="hud-block" id="hud-lives"></div>
             <div class="hud-block" id="hud-shield"></div>
-          </div>
-          <div class="boss-bar hidden" id="bossBar">
-            <span id="bossName"></span>
-            <div class="boss-health">
-              <div class="boss-health-fill" id="bossHealthFill"></div>
-            </div>
           </div>
         </div>
       </div>
@@ -97,6 +100,15 @@
     <div class="panel pause">
       <h2>ПАУЗА</h2>
       <p>ESC / P / кнопка ПАУЗА</p>
+      <div class="admin-panel hidden" id="adminPanel">
+        <div class="admin-title">АДМИН-ПАНЕЛЬ</div>
+        <label class="admin-label" for="adminLevelSelect">Выбор уровня:</label>
+        <select id="adminLevelSelect" class="admin-select"></select>
+        <div class="admin-actions">
+          <button class="admin-button" id="adminGoLevel">ПЕРЕЙТИ</button>
+          <button class="admin-button admin-reset" id="adminResetRun">RESET RUN</button>
+        </div>
+      </div>
       <button id="finishButtonPause">ЗАВЕРШИТЬ ИГРУ</button>
     </div>
   </div>
