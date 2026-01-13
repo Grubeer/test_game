@@ -226,7 +226,7 @@ const weaponLevels = [
 const musicTracks = buildMusicTracks();
 
 function buildMusicTracks() {
-  // Autotracker-inspired procedural music generator.
+  // Tracker-style procedural music generator inspired by autotracker.
   return {
     menu: createAutoTrack({ seed: 0x4d5054, tempo: 240, root: 57, mood: "bright" }),
     levelA: createAutoTrack({ seed: 0x4c564c, tempo: 220, root: 55, mood: "adventure" }),
@@ -238,27 +238,70 @@ function buildMusicTracks() {
 
 function createAutoTrack({ seed, tempo, root, mood }) {
   const rng = mulberry32(seed);
-  const length = 8;
   const scale = pickScale(mood);
-  const melody = [];
-  const bass = [];
+  const patternLength = 16;
+  const progression = pickProgression(rng, mood);
+  const steps = [];
 
-  for (let i = 0; i < length; i += 1) {
-    const noteStep = scale[Math.floor(rng() * scale.length)];
-    const melodyNote = root + 12 + noteStep + (rng() < 0.2 ? 12 : 0);
-    melody.push(midiToFreq(melodyNote));
+  for (let i = 0; i < patternLength; i += 1) {
+    const chordIndex = progression[Math.floor(i / 4) % progression.length];
+    const chordMidi = buildChord(root, scale, chordIndex);
+    const chordFreq = chordMidi.map(midiToFreq);
+    const bassMidi = root - 12 + scale[chordIndex];
+    const melodyMidi = rng() < 0.72
+      ? pickMelodyNote(rng, root + 12, scale, chordMidi)
+      : null;
+    const stepDrum = pickDrum(i, rng);
 
-    const bassStep = scale[Math.floor(rng() * scale.length)];
-    const bassNote = root - 12 + bassStep;
-    bass.push(midiToFreq(bassNote));
+    steps.push({
+      melody: melodyMidi ? midiToFreq(melodyMidi) : null,
+      bass: midiToFreq(bassMidi),
+      chord: i % 4 === 0 ? chordFreq : null,
+      drum: stepDrum,
+    });
   }
 
   const tempoVariance = 0.9 + rng() * 0.2;
   return {
     tempo: Math.floor(tempo * tempoVariance),
-    melody,
-    bass,
+    steps,
   };
+}
+
+function pickProgression(rng, mood) {
+  if (mood === "tense") return rng() < 0.5 ? [0, 5, 1, 6] : [0, 3, 5, 4];
+  if (mood === "mystic") return rng() < 0.5 ? [0, 4, 2, 5] : [0, 5, 3, 2];
+  if (mood === "bright") return rng() < 0.5 ? [0, 3, 4, 5] : [0, 4, 5, 3];
+  return rng() < 0.5 ? [0, 5, 3, 4] : [0, 4, 1, 5];
+}
+
+function buildChord(root, scale, degree) {
+  const base = scale[degree % scale.length];
+  const third = scale[(degree + 2) % scale.length];
+  const fifth = scale[(degree + 4) % scale.length];
+  const thirdAdjust = third < base ? 12 : 0;
+  const fifthAdjust = fifth < third ? 12 : 0;
+  return [
+    root + base,
+    root + third + thirdAdjust,
+    root + fifth + fifthAdjust,
+  ];
+}
+
+function pickMelodyNote(rng, base, scale, chordMidi) {
+  if (rng() < 0.6) {
+    const chordChoice = chordMidi[Math.floor(rng() * chordMidi.length)];
+    return chordChoice + (rng() < 0.3 ? 12 : 0);
+  }
+  const step = scale[Math.floor(rng() * scale.length)];
+  return base + step + (rng() < 0.2 ? 12 : 0);
+}
+
+function pickDrum(step, rng) {
+  if (step % 8 === 0) return "kick";
+  if (step % 8 === 4) return "snare";
+  if (step % 2 === 0 && rng() < 0.8) return "hat";
+  return null;
 }
 
 function pickScale(mood) {
@@ -608,6 +651,7 @@ function initAudio() {
   state.audio.sfxGain = state.audio.createGain();
   state.audio.sfxGain.gain.value = 0.5;
   state.audio.sfxGain.connect(state.audio.master);
+  state.audio.noiseBuffer = createNoiseBuffer(state.audio);
 }
 
 function setSound(enabled) {
@@ -685,11 +729,18 @@ function scheduleMusic(trackKey) {
   let index = 0;
   const step = () => {
     if (!state.audio || state.currentTrack !== trackKey) return;
-    const melody = track.melody[index % track.melody.length];
-    const bass = track.bass[index % track.bass.length];
-    playMusicTone(melody, 0.16, "square", 0.1);
+    const beat = track.steps[index % track.steps.length];
+    if (beat.melody) {
+      playMusicTone(beat.melody, 0.16, "square", 0.1);
+    }
     if (index % 2 === 0) {
-      playMusicTone(bass, 0.18, "triangle", 0.08);
+      playMusicTone(beat.bass, 0.2, "triangle", 0.08);
+    }
+    if (beat.chord) {
+      beat.chord.forEach((freq) => playMusicTone(freq, 0.12, "sawtooth", 0.04));
+    }
+    if (beat.drum) {
+      playDrum(beat.drum);
     }
     index += 1;
     state.musicTimer = setTimeout(step, track.tempo);
@@ -708,6 +759,48 @@ function playMusicTone(freq, duration, type, volume) {
   gain.connect(state.audio.musicGain);
   osc.start();
   osc.stop(state.audio.currentTime + duration);
+}
+
+function playDrum(type) {
+  if (!state.audio || !state.soundOn) return;
+  const now = state.audio.currentTime;
+  if (type === "kick") {
+    const osc = state.audio.createOscillator();
+    const gain = state.audio.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+    osc.connect(gain);
+    gain.connect(state.audio.musicGain);
+    osc.start(now);
+    osc.stop(now + 0.14);
+    return;
+  }
+
+  const noise = state.audio.createBufferSource();
+  noise.buffer = state.audio.noiseBuffer;
+  const filter = state.audio.createBiquadFilter();
+  const gain = state.audio.createGain();
+  filter.type = type === "snare" ? "bandpass" : "highpass";
+  filter.frequency.value = type === "snare" ? 1800 : 6000;
+  gain.gain.value = type === "snare" ? 0.1 : 0.06;
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(state.audio.musicGain);
+  noise.start(now);
+  noise.stop(now + (type === "snare" ? 0.12 : 0.05));
+}
+
+function createNoiseBuffer(audio) {
+  const duration = 1;
+  const buffer = audio.createBuffer(1, audio.sampleRate * duration, audio.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) {
+    data[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
 }
 
 function switchMusic(trackKey) {
