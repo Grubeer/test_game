@@ -186,17 +186,63 @@ class Parser {
 }
 
 class SessionStore {
-  constructor(key = 'mergeReportSession') { this.key = key; }
-  save(state) { localStorage.setItem(this.key, JSON.stringify(state)); }
+  constructor(key = 'mergeReportSession') {
+    this.key = key;
+    this.fallbackKey = `${key}:fallbackComments`;
+  }
+
+  save(state) {
+    const payload = JSON.stringify(state);
+    try {
+      localStorage.setItem(this.key, payload);
+      localStorage.removeItem(this.fallbackKey);
+      return { mode: 'full' };
+    } catch (error) {
+      if (!isQuotaExceededError(error)) throw error;
+      const fallback = this.buildFallbackState(state);
+      try {
+        localStorage.setItem(this.fallbackKey, JSON.stringify(fallback));
+        localStorage.removeItem(this.key);
+        return { mode: 'fallback' };
+      } catch {
+        return { mode: 'none' };
+      }
+    }
+  }
+
   load() {
     const raw = localStorage.getItem(this.key);
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch { return null; }
+    if (raw) {
+      try { return { mode: 'full', state: JSON.parse(raw) }; } catch { /* ignore */ }
+    }
+
+    const fallbackRaw = localStorage.getItem(this.fallbackKey);
+    if (!fallbackRaw) return null;
+    try {
+      return { mode: 'fallback', state: JSON.parse(fallbackRaw) };
+    } catch {
+      return null;
+    }
   }
+
+  buildFallbackState(state) {
+    return {
+      version: 1,
+      activeTab: state.activeTab,
+      selectedId: state.selectedId,
+      comments: (state.objects || []).map((obj) => ({
+        path: obj.path,
+        objectComment: obj.objectComment || '',
+        diffComments: (obj.diffs || []).map((diff) => ({ id: diff.id, comment: diff.comment || '' })).filter((d) => d.comment)
+      })).filter((obj) => obj.objectComment || obj.diffComments.length)
+    };
+  }
+
   download(state) {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
     this.downloadBlob(blob, `merge-session-${Date.now()}.json`);
   }
+
   downloadBlob(blob, fileName) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -297,6 +343,7 @@ class App {
     this.activeTab = 'main';
     this.selectedId = '';
     this.sidebarOpen = false;
+    this.pendingComments = [];
 
     this.el = {
       txtInput: document.getElementById('txtInput'),
@@ -326,6 +373,7 @@ class App {
       const text = await file.text();
       this.objects = this.parser.parse(text);
       this.selectedId = this.objects[0]?.id || '';
+      this.applyPendingComments();
       this.persist();
       this.render();
     });
@@ -335,6 +383,7 @@ class App {
       if (!file) return;
       const state = JSON.parse(await file.text());
       this.applyState(state);
+      this.pendingComments = [];
       this.persist();
       this.render();
     });
@@ -475,14 +524,52 @@ class App {
     this.el.tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === this.activeTab));
   }
 
+  applyPendingComments() {
+    if (!this.pendingComments.length) return;
+    const byPath = new Map(this.pendingComments.map((entry) => [entry.path, entry]));
+    this.objects.forEach((obj) => {
+      const cached = byPath.get(obj.path);
+      if (!cached) return;
+      if (cached.objectComment) obj.objectComment = cached.objectComment;
+      const diffMap = new Map((cached.diffComments || []).map((d) => [d.id, d.comment]));
+      obj.diffs.forEach((diff) => {
+        if (diffMap.has(diff.id)) diff.comment = diffMap.get(diff.id);
+      });
+    });
+    this.pendingComments = [];
+  }
+
   restoreFromCache() {
     const cached = this.store.load();
     if (!cached) return;
-    this.applyState(cached);
+
+    if (cached.mode === 'full') {
+      this.applyState(cached.state);
+      this.render();
+      return;
+    }
+
+    this.activeTab = cached.state.activeTab || 'main';
+    this.selectedId = cached.state.selectedId || '';
+    this.pendingComments = cached.state.comments || [];
+    this.el.tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === this.activeTab));
     this.render();
   }
 
-  persist() { this.store.save(this.state()); }
+  persist() {
+    try {
+      const result = this.store.save(this.state());
+      if (result?.mode === 'fallback') {
+        console.warn('Локальный кэш переполнен: сохранены только комментарии. Для полного восстановления используйте «Сохранить сессию».');
+      }
+    } catch (error) {
+      console.error('Не удалось сохранить локальный кэш сессии', error);
+    }
+  }
+}
+
+function isQuotaExceededError(error) {
+  return error && (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014);
 }
 
 function csvCell(value) {
