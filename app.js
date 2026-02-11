@@ -304,8 +304,8 @@ class ObjectCard {
         <td>${escapeHtml(group)}</td>
         <td>${escapeHtml(item)}</td>
         <td>${escapeHtml(property)}</td>
-        <td>${escapeHtml(d.before || '-')}</td>
-        <td>${escapeHtml(d.after || '-')}</td>
+        <td class="old-value">${escapeHtml(d.before || '-')}</td>
+        <td class="new-value">${escapeHtml(d.after || '-')}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="5">Нет блоков метаданных</td></tr>';
 
@@ -317,11 +317,11 @@ class ObjectCard {
           <small>${escapeHtml(d.blockLabel || 'Блок кода')}</small>
         </div>
         <div class="code-hunk">
-          <div>
+          <div class="diff-pane diff-before">
             <div class="pane-title">Было</div>
             <pre>${escapeHtml(d.before || '')}</pre>
           </div>
-          <div>
+          <div class="diff-pane diff-after">
             <div class="pane-title">Стало</div>
             <pre>${escapeHtml(d.after || '')}</pre>
           </div>
