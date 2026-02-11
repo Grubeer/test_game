@@ -9,48 +9,48 @@ class Parser {
     ];
     const escaped = this.metadataPrefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     this.pathRegex = new RegExp(`(${escaped.join('|')})[\\wА-Яа-яЁё]+(?:\\.[\\wА-Яа-яЁё]+)*`);
-    this.serviceLineRegex = /(условные обозначения|объект присутствует только|сравнение конфигураций|легенда|обозначения)/i;
+    this.legendLineRegex = /(условные обозначения|сравнение конфигураций|легенда|обозначения)/i;
     this.referenceRegex = /(справочн|help|описани|подсказк|комментар)/i;
   }
 
   parse(txt) {
     const lines = txt.replace(/\r/g, '').split('\n');
     const objects = [];
+    const objectByKey = new Map();
     let current = null;
 
     for (const rawLine of lines) {
       const line = rawLine.trimEnd();
       const header = this.extractObjectHeader(line);
       if (header) {
-        if (current) {
-          this.finishObject(current);
-          objects.push(current);
+        const key = `${header.path}|${header.changeType}`;
+        if (!objectByKey.has(key)) {
+          const obj = {
+            id: `obj_${objects.length + 1}`,
+            path: header.path,
+            section: header.section,
+            metadataType: header.metadataType,
+            objectName: header.objectName,
+            changeType: header.changeType,
+            rawLines: [],
+            diffs: [],
+            objectComment: '',
+            risk: 'Низкий',
+            strategy: 'можно принять',
+            isReferenceOnly: false
+          };
+          objectByKey.set(key, obj);
+          objects.push(obj);
         }
-        current = {
-          id: `obj_${objects.length + 1}`,
-          path: header.path,
-          section: header.section,
-          metadataType: header.metadataType,
-          objectName: header.objectName,
-          changeType: header.changeType,
-          rawLines: [],
-          diffs: [],
-          objectComment: '',
-          risk: 'Низкий',
-          strategy: 'можно принять',
-          isReferenceOnly: false
-        };
+        current = objectByKey.get(key);
         continue;
       }
-      if (current && !this.serviceLineRegex.test(line)) {
+      if (current && !this.legendLineRegex.test(line.trim())) {
         current.rawLines.push(line);
       }
     }
 
-    if (current) {
-      this.finishObject(current);
-      objects.push(current);
-    }
+    objects.forEach((obj) => this.finishObject(obj));
 
     return objects;
   }
@@ -137,7 +137,23 @@ class Parser {
         continue;
       }
 
-      if (this.serviceLineRegex.test(line)) continue;
+      const onlyInMainMatch = line.match(/^Объект присутствует только в основной конфигурации(?::\s*\d+\s*-\s*\d+)?/i);
+      const onlyInFileMatch = line.match(/^Объект присутствует только в файле(?::\s*\d+\s*-\s*\d+)?/i);
+      if (onlyInMainMatch || onlyInFileMatch) {
+        flush();
+        currentModule = '';
+        currentRoutine = '';
+        contextStack = ['Состав объекта'];
+        currentBlockLabel = (onlyInMainMatch || onlyInFileMatch)[0];
+        const isMain = Boolean(onlyInMainMatch);
+        const markerText = (onlyInMainMatch || onlyInFileMatch)[0];
+        if (object.changeType === 'Изменён') {
+          if (isMain) before.push(markerText);
+          else after.push(markerText);
+          flush();
+        }
+        continue;
+      }
 
       if (/\bМодуль\b/i.test(line)) {
         flush();
@@ -181,6 +197,25 @@ class Parser {
       }
     }
     flush();
+    if (!diffs.length) {
+      const fallback = object.changeType === 'Только в основной'
+        ? { before: 'Объект присутствует только в основной конфигурации', after: '' }
+        : object.changeType === 'Только в файле'
+          ? { before: '', after: 'Объект присутствует только в файле' }
+          : { before: 'Изменения без детализированных строк', after: 'Изменения без детализированных строк' };
+      diffs.push({
+        id: `${object.id}_d1`,
+        kind: 'metadata',
+        context: 'Состав объекта',
+        module: '',
+        routine: 'Вне функции/процедуры',
+        blockLabel: '',
+        before: fallback.before,
+        after: fallback.after,
+        comment: '',
+        lineCount: (fallback.before ? 1 : 0) + (fallback.after ? 1 : 0)
+      });
+    }
     object.diffs = diffs;
   }
 
@@ -436,7 +471,7 @@ class App {
     this.el.txtInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readTextFileWithEncoding(file);
       this.objects = this.parser.parse(text);
       this.selectedId = this.objects[0]?.id || '';
       this.applyPendingComments();
@@ -720,6 +755,22 @@ function highlightLineDifference(beforeLine, afterLine) {
     beforeHtml: `${escapeHtml(beforePrefix)}${beforeMiddle ? `<span class="diff-removed">${escapeHtml(beforeMiddle)}</span>` : ''}${escapeHtml(beforeSuffix)}`,
     afterHtml: `${escapeHtml(afterPrefix)}${afterMiddle ? `<span class="diff-added">${escapeHtml(afterMiddle)}</span>` : ''}${escapeHtml(afterSuffix)}`
   };
+}
+
+async function readTextFileWithEncoding(file) {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const hasUtf16LeBom = bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE;
+  const hasUtf16BeBom = bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF;
+  const utf16LeZeroPattern = bytes.slice(1, Math.min(bytes.length, 2000), 2).some((b) => b === 0x00);
+
+  if (hasUtf16LeBom || utf16LeZeroPattern) {
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+  if (hasUtf16BeBom) {
+    return new TextDecoder('utf-16be').decode(bytes);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 if (typeof window !== 'undefined') {

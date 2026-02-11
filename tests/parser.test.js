@@ -32,5 +32,9 @@ assert.ok(bigObjectsOne.length > 1000, 'Report One должен успешно �
 assert.ok(bigObjectsTwo.length > 1000, 'Report Two должен успешно парситься (много объектов)');
 assert.ok(bigObjectsOne.some((o) => o.path === 'Конфигурация.УправлениеТорговлей'), 'Report One: должен находиться корневой объект конфигурации');
 assert.ok(bigObjectsTwo.some((o) => o.path === 'Конфигурация.УправлениеТорговлей'), 'Report Two: должен находиться корневой объект конфигурации');
+assert.ok(bigObjectsOne.every((o) => o.diffs.length > 0), 'Report One: каждый объект должен содержать минимум один блок изменений');
+assert.ok(bigObjectsTwo.every((o) => o.diffs.length > 0), 'Report Two: каждый объект должен содержать минимум один блок изменений');
+assert.ok(bigObjectsOne.some((o) => o.diffs.some((d) => d.kind === 'metadata')), 'Report One: должны присутствовать метаданные');
+assert.ok(bigObjectsTwo.some((o) => o.diffs.some((d) => d.kind === 'metadata')), 'Report Two: должны присутствовать метаданные');
 
 console.log('parser.test.js: ok');
