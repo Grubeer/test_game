@@ -310,12 +310,12 @@ class ObjectCard {
     }).join('') || '<tr><td colspan="5">Нет блоков метаданных</td></tr>';
 
     const codeBlocks = codeDiffs.map((d) => `
-      <div class="code-hunk-wrap">
-        <div class="code-hunk-head">
+      <details class="code-hunk-wrap">
+        <summary class="code-hunk-head" role="button">
           <strong>${escapeHtml(d.module || 'Модуль не определён')}</strong>
           <small>${escapeHtml(d.routine || 'Вне функции/процедуры')}</small>
           <small>${escapeHtml(d.blockLabel || 'Блок кода')}</small>
-        </div>
+        </summary>
         <div class="code-hunk">
           <div class="diff-pane diff-before">
             <div class="pane-title">Было</div>
@@ -326,7 +326,7 @@ class ObjectCard {
             <pre>${escapeHtml(d.after || '')}</pre>
           </div>
         </div>
-      </div>
+      </details>
     `).join('') || '<p>Нет блоков кода</p>';
 
     const diffComments = object.diffs.map((d) => `
