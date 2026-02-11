@@ -9,57 +9,67 @@ class Parser {
     ];
     const escaped = this.metadataPrefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     this.pathRegex = new RegExp(`(${escaped.join('|')})[\\wА-Яа-яЁё]+(?:\\.[\\wА-Яа-яЁё]+)*`);
-    this.serviceLineRegex = /(условные обозначения|объект присутствует только|сравнение конфигураций|легенда|обозначения)/i;
+    this.legendLineRegex = /(условные обозначения|сравнение конфигураций|легенда|обозначения)/i;
     this.referenceRegex = /(справочн|help|описани|подсказк|комментар)/i;
   }
 
   parse(txt) {
     const lines = txt.replace(/\r/g, '').split('\n');
     const objects = [];
+    const objectByKey = new Map();
     let current = null;
 
     for (const rawLine of lines) {
       const line = rawLine.trimEnd();
       const header = this.extractObjectHeader(line);
       if (header) {
-        if (current) {
-          this.finishObject(current);
-          objects.push(current);
+        const key = `${header.path}|${header.changeType}`;
+        if (!objectByKey.has(key)) {
+          const obj = {
+            id: `obj_${objects.length + 1}`,
+            path: header.path,
+            section: header.section,
+            metadataType: header.metadataType,
+            objectName: header.objectName,
+            changeType: header.changeType,
+            rawLines: [],
+            diffs: [],
+            objectComment: '',
+            risk: 'Низкий',
+            strategy: 'можно принять',
+            isReferenceOnly: false
+          };
+          objectByKey.set(key, obj);
+          objects.push(obj);
         }
-        current = {
-          id: `obj_${objects.length + 1}`,
-          path: header.path,
-          section: header.section,
-          metadataType: header.metadataType,
-          objectName: header.objectName,
-          changeType: header.changeType,
-          rawLines: [],
-          diffs: [],
-          objectComment: '',
-          risk: 'Низкий',
-          strategy: 'можно принять',
-          isReferenceOnly: false
-        };
+        current = objectByKey.get(key);
         continue;
       }
-      if (current && !this.serviceLineRegex.test(line)) {
+      if (current && !this.legendLineRegex.test(line.trim())) {
         current.rawLines.push(line);
       }
     }
 
-    if (current) {
-      this.finishObject(current);
-      objects.push(current);
-    }
+    objects.forEach((obj) => this.finishObject(obj));
 
     return objects;
   }
 
   extractObjectHeader(line) {
-    const marker = line.includes('***') ? 'Изменён' : line.includes('-->') ? 'Только в основной' : line.includes('<---') ? 'Только в файле' : null;
-    if (!marker) return null;
-    const pathMatch = line.match(this.pathRegex);
+    const cleanLine = (line || '').trim();
+    const pathMatch = cleanLine.match(this.pathRegex);
     if (!pathMatch) return null;
+
+    const marker = cleanLine.includes('-->')
+      ? 'Только в основной'
+      : (cleanLine.includes('<---') || cleanLine.includes('<--'))
+        ? 'Только в файле'
+        : cleanLine.includes('***')
+          ? 'Изменён'
+          : null;
+
+    if (!marker) return null;
+
     const path = pathMatch[0];
     const [metadataType, objectName = ''] = path.split('.', 2);
     return { path, section: this.mapSection(metadataType), metadataType, objectName, changeType: marker };
@@ -127,7 +137,23 @@ class Parser {
         continue;
       }
 
-      if (this.serviceLineRegex.test(line)) continue;
+      const onlyInMainMatch = line.match(/^Объект присутствует только в основной конфигурации(?::\s*\d+\s*-\s*\d+)?/i);
+      const onlyInFileMatch = line.match(/^Объект присутствует только в файле(?::\s*\d+\s*-\s*\d+)?/i);
+      if (onlyInMainMatch || onlyInFileMatch) {
+        flush();
+        currentModule = '';
+        currentRoutine = '';
+        contextStack = ['Состав объекта'];
+        currentBlockLabel = (onlyInMainMatch || onlyInFileMatch)[0];
+        const isMain = Boolean(onlyInMainMatch);
+        const markerText = (onlyInMainMatch || onlyInFileMatch)[0];
+        if (object.changeType === 'Изменён') {
+          if (isMain) before.push(markerText);
+          else after.push(markerText);
+          flush();
+        }
+        continue;
+      }
 
       if (/\bМодуль\b/i.test(line)) {
         flush();
@@ -171,6 +197,25 @@ class Parser {
       }
     }
     flush();
+    if (!diffs.length) {
+      const fallback = object.changeType === 'Только в основной'
+        ? { before: 'Объект присутствует только в основной конфигурации', after: '' }
+        : object.changeType === 'Только в файле'
+          ? { before: '', after: 'Объект присутствует только в файле' }
+          : { before: 'Изменения без детализированных строк', after: 'Изменения без детализированных строк' };
+      diffs.push({
+        id: `${object.id}_d1`,
+        kind: 'metadata',
+        context: 'Состав объекта',
+        module: '',
+        routine: 'Вне функции/процедуры',
+        blockLabel: '',
+        before: fallback.before,
+        after: fallback.after,
+        comment: '',
+        lineCount: (fallback.before ? 1 : 0) + (fallback.after ? 1 : 0)
+      });
+    }
     object.diffs = diffs;
   }
 
@@ -292,6 +337,10 @@ class ObjectCard {
 
     this.root.className = 'card';
 
+    if (!['meta', 'code'].includes(this.activeInnerTab)) {
+      this.activeInnerTab = 'meta';
+    }
+
     const metadataDiffs = object.diffs.filter((d) => d.kind === 'metadata');
     const codeDiffs = object.diffs.filter((d) => d.kind === 'code');
     const metaRows = metadataDiffs.map((d) => {
@@ -299,42 +348,43 @@ class ObjectCard {
       const group = parts[0] || 'Свойства';
       const item = parts[1] || object.objectName;
       const property = parts.slice(2).join(' / ') || 'Значение';
+      const cellDiff = renderInlineDiff(d.before || '-', d.after || '-');
       return `
       <tr>
         <td>${escapeHtml(group)}</td>
         <td>${escapeHtml(item)}</td>
         <td>${escapeHtml(property)}</td>
-        <td>${escapeHtml(d.before || '-')}</td>
-        <td>${escapeHtml(d.after || '-')}</td>
+        <td class="old-value">${cellDiff.beforeHtml}</td>
+        <td class="new-value">${cellDiff.afterHtml}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="5">Нет блоков метаданных</td></tr>';
 
-    const codeBlocks = codeDiffs.map((d) => `
-      <div class="code-hunk-wrap">
-        <div class="code-hunk-head">
+    const codeBlocks = codeDiffs.map((d) => {
+      const codeDiff = renderInlineDiff(d.before || '', d.after || '');
+      return `
+      <details class="code-hunk-wrap">
+        <summary class="code-hunk-head" role="button">
           <strong>${escapeHtml(d.module || 'Модуль не определён')}</strong>
           <small>${escapeHtml(d.routine || 'Вне функции/процедуры')}</small>
           <small>${escapeHtml(d.blockLabel || 'Блок кода')}</small>
-        </div>
+        </summary>
         <div class="code-hunk">
-          <div>
+          <div class="diff-pane diff-before">
             <div class="pane-title">Было</div>
-            <pre>${escapeHtml(d.before || '')}</pre>
+            <pre>${codeDiff.beforeHtml}</pre>
           </div>
-          <div>
+          <div class="diff-pane diff-after">
             <div class="pane-title">Стало</div>
-            <pre>${escapeHtml(d.after || '')}</pre>
+            <pre>${codeDiff.afterHtml}</pre>
           </div>
         </div>
-      </div>
-    `).join('') || '<p>Нет блоков кода</p>';
-
-    const diffComments = object.diffs.map((d) => `
-      <div class="comment-box">
-        <label><strong>${escapeHtml(d.context)}</strong>${d.blockLabel ? ` · ${escapeHtml(d.blockLabel)}` : ''}</label>
-        <textarea data-diff-id="${d.id}" data-comment-type="diff">${escapeHtml(d.comment || '')}</textarea>
-      </div>
-    `).join('') || '<p>Нет отличий для комментариев.</p>';
+        <div class="comment-box module-note">
+          <label><strong>Заметка к модулю</strong>${d.blockLabel ? ` · ${escapeHtml(d.blockLabel)}` : ''}</label>
+          <textarea data-diff-id="${d.id}" data-comment-type="diff" placeholder="Комментарий по этому блоку кода">${escapeHtml(d.comment || '')}</textarea>
+        </div>
+      </details>
+    `;
+    }).join('') || '<p>Нет блоков кода</p>';
 
     this.root.innerHTML = `
       <div class="card-header">
@@ -344,10 +394,14 @@ class ObjectCard {
         </div>
       </div>
 
+      <div class="comment-box object-note">
+        <label><strong>Заметка к объекту</strong></label>
+        <textarea data-comment-type="object" placeholder="Общий комментарий к объекту">${escapeHtml(object.objectComment || '')}</textarea>
+      </div>
+
       <div class="inner-tabs">
         <button class="inner-tab ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-inner-tab="meta">Свойства метаданных</button>
         <button class="inner-tab ${this.activeInnerTab === 'code' ? 'active' : ''}" data-inner-tab="code">Код (блоки)</button>
-        <button class="inner-tab ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-inner-tab="comments">Комментарии</button>
       </div>
 
       <section class="inner-panel ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-panel="meta">
@@ -359,14 +413,6 @@ class ObjectCard {
 
       <section class="inner-panel ${this.activeInnerTab === 'code' ? 'active' : ''}" data-panel="code">
         ${codeBlocks}
-      </section>
-
-      <section class="inner-panel ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-panel="comments">
-        <div class="comment-box">
-          <label>Комментарий к объекту:</label>
-          <textarea data-comment-type="object">${escapeHtml(object.objectComment || '')}</textarea>
-        </div>
-        ${diffComments}
       </section>
     `;
 
@@ -425,7 +471,7 @@ class App {
     this.el.txtInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readTextFileWithEncoding(file);
       this.objects = this.parser.parse(text);
       this.selectedId = this.objects[0]?.id || '';
       this.applyPendingComments();
@@ -638,6 +684,93 @@ function escapeHtml(value) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function renderInlineDiff(beforeText, afterText) {
+  const beforeLines = (beforeText || '').split('\n');
+  const afterLines = (afterText || '').split('\n');
+  const maxLines = Math.max(beforeLines.length, afterLines.length);
+  const beforeRendered = [];
+  const afterRendered = [];
+
+  for (let i = 0; i < maxLines; i += 1) {
+    const left = beforeLines[i] ?? '';
+    const right = afterLines[i] ?? '';
+    const pair = highlightLineDifference(left, right);
+    beforeRendered.push(pair.beforeHtml);
+    afterRendered.push(pair.afterHtml);
+  }
+
+  return {
+    beforeHtml: beforeRendered.join('\n'),
+    afterHtml: afterRendered.join('\n')
+  };
+}
+
+function highlightLineDifference(beforeLine, afterLine) {
+  if (beforeLine === afterLine) {
+    const safe = escapeHtml(beforeLine);
+    return { beforeHtml: safe, afterHtml: safe };
+  }
+
+  if (!beforeLine) {
+    return {
+      beforeHtml: '',
+      afterHtml: `<span class="diff-added">${escapeHtml(afterLine)}</span>`
+    };
+  }
+
+  if (!afterLine) {
+    return {
+      beforeHtml: `<span class="diff-removed">${escapeHtml(beforeLine)}</span>`,
+      afterHtml: ''
+    };
+  }
+
+  let prefixLen = 0;
+  const prefixLimit = Math.min(beforeLine.length, afterLine.length);
+  while (prefixLen < prefixLimit && beforeLine[prefixLen] === afterLine[prefixLen]) {
+    prefixLen += 1;
+  }
+
+  let suffixLen = 0;
+  const beforeRest = beforeLine.length - prefixLen;
+  const afterRest = afterLine.length - prefixLen;
+  const suffixLimit = Math.min(beforeRest, afterRest);
+  while (
+    suffixLen < suffixLimit
+    && beforeLine[beforeLine.length - 1 - suffixLen] === afterLine[afterLine.length - 1 - suffixLen]
+  ) {
+    suffixLen += 1;
+  }
+
+  const beforePrefix = beforeLine.slice(0, prefixLen);
+  const afterPrefix = afterLine.slice(0, prefixLen);
+  const beforeMiddle = beforeLine.slice(prefixLen, beforeLine.length - suffixLen || undefined);
+  const afterMiddle = afterLine.slice(prefixLen, afterLine.length - suffixLen || undefined);
+  const beforeSuffix = suffixLen ? beforeLine.slice(beforeLine.length - suffixLen) : '';
+  const afterSuffix = suffixLen ? afterLine.slice(afterLine.length - suffixLen) : '';
+
+  return {
+    beforeHtml: `${escapeHtml(beforePrefix)}${beforeMiddle ? `<span class="diff-removed">${escapeHtml(beforeMiddle)}</span>` : ''}${escapeHtml(beforeSuffix)}`,
+    afterHtml: `${escapeHtml(afterPrefix)}${afterMiddle ? `<span class="diff-added">${escapeHtml(afterMiddle)}</span>` : ''}${escapeHtml(afterSuffix)}`
+  };
+}
+
+async function readTextFileWithEncoding(file) {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const hasUtf16LeBom = bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE;
+  const hasUtf16BeBom = bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF;
+  const utf16LeZeroPattern = bytes.slice(1, Math.min(bytes.length, 2000), 2).some((b) => b === 0x00);
+
+  if (hasUtf16LeBom || utf16LeZeroPattern) {
+    return new TextDecoder('utf-16le').decode(bytes);
+  }
+  if (hasUtf16BeBom) {
+    return new TextDecoder('utf-16be').decode(bytes);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
 }
 
 if (typeof window !== 'undefined') {
