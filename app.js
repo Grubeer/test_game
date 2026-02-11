@@ -56,10 +56,20 @@ class Parser {
   }
 
   extractObjectHeader(line) {
-    const marker = line.includes('***') ? 'Изменён' : line.includes('-->') ? 'Только в основной' : line.includes('<---') ? 'Только в файле' : null;
-    if (!marker) return null;
-    const pathMatch = line.match(this.pathRegex);
+    const cleanLine = (line || '').trim();
+    const pathMatch = cleanLine.match(this.pathRegex);
     if (!pathMatch) return null;
+
+    const marker = cleanLine.includes('-->')
+      ? 'Только в основной'
+      : (cleanLine.includes('<---') || cleanLine.includes('<--'))
+        ? 'Только в файле'
+        : cleanLine.includes('***')
+          ? 'Изменён'
+          : null;
+
+    if (!marker) return null;
+
     const path = pathMatch[0];
     const [metadataType, objectName = ''] = path.split('.', 2);
     return { path, section: this.mapSection(metadataType), metadataType, objectName, changeType: marker };
@@ -292,6 +302,10 @@ class ObjectCard {
 
     this.root.className = 'card';
 
+    if (!['meta', 'code'].includes(this.activeInnerTab)) {
+      this.activeInnerTab = 'meta';
+    }
+
     const metadataDiffs = object.diffs.filter((d) => d.kind === 'metadata');
     const codeDiffs = object.diffs.filter((d) => d.kind === 'code');
     const metaRows = metadataDiffs.map((d) => {
@@ -329,16 +343,13 @@ class ObjectCard {
             <pre>${codeDiff.afterHtml}</pre>
           </div>
         </div>
+        <div class="comment-box module-note">
+          <label><strong>Заметка к модулю</strong>${d.blockLabel ? ` · ${escapeHtml(d.blockLabel)}` : ''}</label>
+          <textarea data-diff-id="${d.id}" data-comment-type="diff" placeholder="Комментарий по этому блоку кода">${escapeHtml(d.comment || '')}</textarea>
+        </div>
       </details>
     `;
     }).join('') || '<p>Нет блоков кода</p>';
-
-    const diffComments = object.diffs.map((d) => `
-      <div class="comment-box">
-        <label><strong>${escapeHtml(d.context)}</strong>${d.blockLabel ? ` · ${escapeHtml(d.blockLabel)}` : ''}</label>
-        <textarea data-diff-id="${d.id}" data-comment-type="diff">${escapeHtml(d.comment || '')}</textarea>
-      </div>
-    `).join('') || '<p>Нет отличий для комментариев.</p>';
 
     this.root.innerHTML = `
       <div class="card-header">
@@ -348,10 +359,14 @@ class ObjectCard {
         </div>
       </div>
 
+      <div class="comment-box object-note">
+        <label><strong>Заметка к объекту</strong></label>
+        <textarea data-comment-type="object" placeholder="Общий комментарий к объекту">${escapeHtml(object.objectComment || '')}</textarea>
+      </div>
+
       <div class="inner-tabs">
         <button class="inner-tab ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-inner-tab="meta">Свойства метаданных</button>
         <button class="inner-tab ${this.activeInnerTab === 'code' ? 'active' : ''}" data-inner-tab="code">Код (блоки)</button>
-        <button class="inner-tab ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-inner-tab="comments">Комментарии</button>
       </div>
 
       <section class="inner-panel ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-panel="meta">
@@ -363,14 +378,6 @@ class ObjectCard {
 
       <section class="inner-panel ${this.activeInnerTab === 'code' ? 'active' : ''}" data-panel="code">
         ${codeBlocks}
-      </section>
-
-      <section class="inner-panel ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-panel="comments">
-        <div class="comment-box">
-          <label>Комментарий к объекту:</label>
-          <textarea data-comment-type="object">${escapeHtml(object.objectComment || '')}</textarea>
-        </div>
-        ${diffComments}
       </section>
     `;
 

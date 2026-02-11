@@ -211,6 +211,12 @@ textarea {
 }
 .menu-button { display: none; }
 .comment-box { margin-bottom: 10px; }
+.object-note { margin-top: 10px; }
+.module-note {
+  border-top: 1px solid #e2e8f1;
+  padding: 8px;
+  margin-bottom: 0;
+}
 
 @media (max-width: 980px) {
   .filters { grid-template-columns: 1fr; }

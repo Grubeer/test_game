@@ -8,6 +8,11 @@ const samplePath = path.join(__dirname, '..', 'samples', 'sample-report.txt');
 const txt = fs.readFileSync(samplePath, 'utf8');
 const objects = parser.parse(txt);
 
+const bigReportOnePath = path.join(__dirname, '..', 'samples', 'Report One.txt');
+const bigReportTwoPath = path.join(__dirname, '..', 'samples', 'Report Two.txt');
+const bigObjectsOne = parser.parse(fs.readFileSync(bigReportOnePath, 'utf16le'));
+const bigObjectsTwo = parser.parse(fs.readFileSync(bigReportTwoPath, 'utf16le'));
+
 assert.ok(objects.length >= 4, 'Должно распознаться несколько объектов');
 const doc = objects.find((o) => o.path === 'Документ.РеализацияТоваровУслуг');
 assert.ok(doc, 'Документ должен распознаться');
@@ -22,5 +27,10 @@ assert.ok(!(httpBlock.before || '').includes('···'), 'Технические 
 
 const refObj = objects.find((o) => o.path === 'ОбщийМодуль.ОбщегоНазначения');
 assert.ok(refObj && refObj.isReferenceOnly, 'Help/справка должна уйти в справочную вкладку');
+
+assert.ok(bigObjectsOne.length > 1000, 'Report One должен успешно парситься (много объектов)');
+assert.ok(bigObjectsTwo.length > 1000, 'Report Two должен успешно парситься (много объектов)');
+assert.ok(bigObjectsOne.some((o) => o.path === 'Конфигурация.УправлениеТорговлей'), 'Report One: должен находиться корневой объект конфигурации');
+assert.ok(bigObjectsTwo.some((o) => o.path === 'Конфигурация.УправлениеТорговлей'), 'Report Two: должен находиться корневой объект конфигурации');
 
 console.log('parser.test.js: ok');
