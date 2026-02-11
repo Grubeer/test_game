@@ -299,17 +299,20 @@ class ObjectCard {
       const group = parts[0] || 'Свойства';
       const item = parts[1] || object.objectName;
       const property = parts.slice(2).join(' / ') || 'Значение';
+      const cellDiff = renderInlineDiff(d.before || '-', d.after || '-');
       return `
       <tr>
         <td>${escapeHtml(group)}</td>
         <td>${escapeHtml(item)}</td>
         <td>${escapeHtml(property)}</td>
-        <td class="old-value">${escapeHtml(d.before || '-')}</td>
-        <td class="new-value">${escapeHtml(d.after || '-')}</td>
+        <td class="old-value">${cellDiff.beforeHtml}</td>
+        <td class="new-value">${cellDiff.afterHtml}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="5">Нет блоков метаданных</td></tr>';
 
-    const codeBlocks = codeDiffs.map((d) => `
+    const codeBlocks = codeDiffs.map((d) => {
+      const codeDiff = renderInlineDiff(d.before || '', d.after || '');
+      return `
       <details class="code-hunk-wrap">
         <summary class="code-hunk-head" role="button">
           <strong>${escapeHtml(d.module || 'Модуль не определён')}</strong>
@@ -319,15 +322,16 @@ class ObjectCard {
         <div class="code-hunk">
           <div class="diff-pane diff-before">
             <div class="pane-title">Было</div>
-            <pre>${escapeHtml(d.before || '')}</pre>
+            <pre>${codeDiff.beforeHtml}</pre>
           </div>
           <div class="diff-pane diff-after">
             <div class="pane-title">Стало</div>
-            <pre>${escapeHtml(d.after || '')}</pre>
+            <pre>${codeDiff.afterHtml}</pre>
           </div>
         </div>
       </details>
-    `).join('') || '<p>Нет блоков кода</p>';
+    `;
+    }).join('') || '<p>Нет блоков кода</p>';
 
     const diffComments = object.diffs.map((d) => `
       <div class="comment-box">
@@ -638,6 +642,77 @@ function escapeHtml(value) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function renderInlineDiff(beforeText, afterText) {
+  const beforeLines = (beforeText || '').split('\n');
+  const afterLines = (afterText || '').split('\n');
+  const maxLines = Math.max(beforeLines.length, afterLines.length);
+  const beforeRendered = [];
+  const afterRendered = [];
+
+  for (let i = 0; i < maxLines; i += 1) {
+    const left = beforeLines[i] ?? '';
+    const right = afterLines[i] ?? '';
+    const pair = highlightLineDifference(left, right);
+    beforeRendered.push(pair.beforeHtml);
+    afterRendered.push(pair.afterHtml);
+  }
+
+  return {
+    beforeHtml: beforeRendered.join('\n'),
+    afterHtml: afterRendered.join('\n')
+  };
+}
+
+function highlightLineDifference(beforeLine, afterLine) {
+  if (beforeLine === afterLine) {
+    const safe = escapeHtml(beforeLine);
+    return { beforeHtml: safe, afterHtml: safe };
+  }
+
+  if (!beforeLine) {
+    return {
+      beforeHtml: '',
+      afterHtml: `<span class="diff-added">${escapeHtml(afterLine)}</span>`
+    };
+  }
+
+  if (!afterLine) {
+    return {
+      beforeHtml: `<span class="diff-removed">${escapeHtml(beforeLine)}</span>`,
+      afterHtml: ''
+    };
+  }
+
+  let prefixLen = 0;
+  const prefixLimit = Math.min(beforeLine.length, afterLine.length);
+  while (prefixLen < prefixLimit && beforeLine[prefixLen] === afterLine[prefixLen]) {
+    prefixLen += 1;
+  }
+
+  let suffixLen = 0;
+  const beforeRest = beforeLine.length - prefixLen;
+  const afterRest = afterLine.length - prefixLen;
+  const suffixLimit = Math.min(beforeRest, afterRest);
+  while (
+    suffixLen < suffixLimit
+    && beforeLine[beforeLine.length - 1 - suffixLen] === afterLine[afterLine.length - 1 - suffixLen]
+  ) {
+    suffixLen += 1;
+  }
+
+  const beforePrefix = beforeLine.slice(0, prefixLen);
+  const afterPrefix = afterLine.slice(0, prefixLen);
+  const beforeMiddle = beforeLine.slice(prefixLen, beforeLine.length - suffixLen || undefined);
+  const afterMiddle = afterLine.slice(prefixLen, afterLine.length - suffixLen || undefined);
+  const beforeSuffix = suffixLen ? beforeLine.slice(beforeLine.length - suffixLen) : '';
+  const afterSuffix = suffixLen ? afterLine.slice(afterLine.length - suffixLen) : '';
+
+  return {
+    beforeHtml: `${escapeHtml(beforePrefix)}${beforeMiddle ? `<span class="diff-removed">${escapeHtml(beforeMiddle)}</span>` : ''}${escapeHtml(beforeSuffix)}`,
+    afterHtml: `${escapeHtml(afterPrefix)}${afterMiddle ? `<span class="diff-added">${escapeHtml(afterMiddle)}</span>` : ''}${escapeHtml(afterSuffix)}`
+  };
 }
 
 if (typeof window !== 'undefined') {

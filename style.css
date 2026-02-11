@@ -161,13 +161,11 @@ input, select {
   font-size: 13px;
 }
 .meta-table td.old-value {
-  background: #ffe9ec;
-  color: #8f1522;
+  color: #1d2331;
 }
 
 .meta-table td.new-value {
-  background: #e8f8ec;
-  color: #17552a;
+  color: #1d2331;
 }
 .code-hunk {
   display: grid;
@@ -188,15 +186,21 @@ pre {
 }
 
 .diff-pane.diff-before pre {
-  background: #ffe9ec;
-  border-color: #f4cdd3;
-  color: #8f1522;
+  color: inherit;
 }
 
 .diff-pane.diff-after pre {
-  background: #e8f8ec;
-  border-color: #c6e9d0;
-  color: #17552a;
+  color: inherit;
+}
+
+.diff-removed {
+  color: #b4232e;
+  font-weight: 600;
+}
+
+.diff-added {
+  color: #18743b;
+  font-weight: 600;
 }
 textarea {
   width: 100%;
