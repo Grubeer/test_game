@@ -91,6 +91,7 @@ class Parser {
     let contextStack = [];
     let currentModule = '';
     let currentRoutine = '';
+    let currentBlockLabel = '';
 
     const flush = () => {
       if (!before.length && !after.length) return;
@@ -102,6 +103,7 @@ class Parser {
         context: context || (kind === 'code' ? 'Код' : 'Свойства'),
         module: currentModule,
         routine: currentRoutine || 'Вне функции/процедуры',
+        blockLabel: currentBlockLabel,
         before: before.join('\n').trim(),
         after: after.join('\n').trim(),
         comment: '',
@@ -113,10 +115,18 @@ class Parser {
 
     for (const lineRaw of object.rawLines) {
       const line = lineRaw.trim();
-      if (!line || /^Изменено:\s*\d+\s*-\s*\d+/i.test(line)) {
+      if (!line) {
         flush();
         continue;
       }
+
+      const changeBlockMatch = line.match(/^Изменено:\s*\d+\s*-\s*\d+/i);
+      if (changeBlockMatch) {
+        flush();
+        currentBlockLabel = changeBlockMatch[0];
+        continue;
+      }
+
       if (this.serviceLineRegex.test(line)) continue;
 
       if (/\bМодуль\b/i.test(line)) {
@@ -125,30 +135,35 @@ class Parser {
         contextStack = ['Код'];
         continue;
       }
+
       const contextMatch = line.match(/(Реквизиты|Табличные части|Формы|Команды|Макеты|Свойства|Права|Параметры)/i);
       if (contextMatch) {
         flush();
+        currentModule = '';
         contextStack = [contextMatch[1]];
+        continue;
       }
+
       if (/^[-*•]/.test(line) && !/^[-*•]\s*[<>]/.test(line)) {
         const cleaned = line.replace(/^[-*•]+\s*/, '');
         if (cleaned) {
           flush();
           contextStack = [...contextStack.slice(0, 1), cleaned];
+          continue;
         }
       }
 
-      const routineProbe = line.replace(/^[<>]+\s?/, '');
+      const routineProbe = line.replace(/^[<>]+\s?/, '').replace(/^"|"$/g, '');
       const routineStart = routineProbe.match(/^\s*(Процедура|Функция)\s+([\wА-Яа-яЁё]+)/i);
       if (routineStart) currentRoutine = `${routineStart[1]} ${routineStart[2]}`;
-      if (/^\s*Конец(Процедуры|Функции)/i.test(line)) currentRoutine = '';
+      if (/^\s*Конец(Процедуры|Функции)/i.test(routineProbe)) currentRoutine = '';
 
       if (line.startsWith('<')) {
-        before.push(line.replace(/^<+\s?/, ''));
+        before.push(this.cleanDiffPayload(line.replace(/^<+\s?/, '')));
       } else if (line.startsWith('>')) {
-        after.push(line.replace(/^>+\s?/, ''));
+        after.push(this.cleanDiffPayload(line.replace(/^>+\s?/, '')));
       } else if (line.startsWith('"') && (object.changeType === 'Только в основной' || object.changeType === 'Только в файле')) {
-        const text = line.replace(/^"|"$/g, '');
+        const text = this.cleanDiffPayload(line);
         if (object.changeType === 'Только в основной') before.push(text);
         else after.push(text);
       } else {
@@ -158,6 +173,15 @@ class Parser {
     flush();
     object.diffs = diffs;
   }
+
+  cleanDiffPayload(value) {
+    return (value || '')
+      .replace(/^"|"$/g, '')
+      .replace(/\\n/g, '\n')
+      .replace(/·/g, ' ')
+      .trim();
+  }
+
 
   looksLikeCode(before, after) {
     return [...before, ...after].some((line) => /(Если|Тогда|КонецЕсли|Процедура|Функция|Возврат|Запрос|Для|Пока|Попытка)/i.test(line));
@@ -256,6 +280,7 @@ class ObjectCard {
   constructor(root, onCommentChange) {
     this.root = root;
     this.onCommentChange = onCommentChange;
+    this.activeInnerTab = 'meta';
   }
 
   render(object) {
@@ -264,39 +289,52 @@ class ObjectCard {
       this.root.textContent = 'Выберите объект в дереве.';
       return;
     }
+
     this.root.className = 'card';
 
-    const metadataRows = object.diffs.filter((d) => d.kind === 'metadata').map((d) => `
+    const metadataDiffs = object.diffs.filter((d) => d.kind === 'metadata');
+    const codeDiffs = object.diffs.filter((d) => d.kind === 'code');
+    const metaRows = metadataDiffs.map((d) => {
+      const parts = d.context.split('/').map((x) => x.trim()).filter(Boolean);
+      const group = parts[0] || 'Свойства';
+      const item = parts[1] || object.objectName;
+      const property = parts.slice(2).join(' / ') || 'Значение';
+      return `
       <tr>
-        <td>${escapeHtml(d.context)}</td>
-        <td>${escapeHtml(d.module || '-')}</td>
+        <td>${escapeHtml(group)}</td>
+        <td>${escapeHtml(item)}</td>
+        <td>${escapeHtml(property)}</td>
         <td>${escapeHtml(d.before || '-')}</td>
         <td>${escapeHtml(d.after || '-')}</td>
-      </tr>`).join('') || '<tr><td colspan="4">Нет блоков метаданных</td></tr>';
+      </tr>`;
+    }).join('') || '<tr><td colspan="5">Нет блоков метаданных</td></tr>';
 
-    const codeBlocks = object.diffs.filter((d) => d.kind === 'code').map((d) => `
-      <div class="code-hunk">
-        <div>
-          <strong>${escapeHtml(d.module || 'Модуль не определён')}</strong><br />
+    const codeBlocks = codeDiffs.map((d) => `
+      <div class="code-hunk-wrap">
+        <div class="code-hunk-head">
+          <strong>${escapeHtml(d.module || 'Модуль не определён')}</strong>
           <small>${escapeHtml(d.routine || 'Вне функции/процедуры')}</small>
-          <pre>${escapeHtml(d.before || '')}</pre>
+          <small>${escapeHtml(d.blockLabel || 'Блок кода')}</small>
         </div>
-        <div>
-          <strong>Стало</strong>
-          <pre>${escapeHtml(d.after || '')}</pre>
+        <div class="code-hunk">
+          <div>
+            <div class="pane-title">Было</div>
+            <pre>${escapeHtml(d.before || '')}</pre>
+          </div>
+          <div>
+            <div class="pane-title">Стало</div>
+            <pre>${escapeHtml(d.after || '')}</pre>
+          </div>
         </div>
-      </div>
-      <div class="comment-box">
-        <label>Комментарий к блоку:</label>
-        <textarea data-diff-id="${d.id}" data-comment-type="diff">${escapeHtml(d.comment || '')}</textarea>
       </div>
     `).join('') || '<p>Нет блоков кода</p>';
 
-    const metaCommentAreas = object.diffs.filter((d) => d.kind === 'metadata').map((d) => `
+    const diffComments = object.diffs.map((d) => `
       <div class="comment-box">
-        <label><strong>${escapeHtml(d.context)}</strong> — комментарий к отличию:</label>
+        <label><strong>${escapeHtml(d.context)}</strong>${d.blockLabel ? ` · ${escapeHtml(d.blockLabel)}` : ''}</label>
         <textarea data-diff-id="${d.id}" data-comment-type="diff">${escapeHtml(d.comment || '')}</textarea>
-      </div>`).join('');
+      </div>
+    `).join('') || '<p>Нет отличий для комментариев.</p>';
 
     this.root.innerHTML = `
       <div class="card-header">
@@ -306,22 +344,38 @@ class ObjectCard {
         </div>
       </div>
 
-      <h3>Метаданные</h3>
-      <table class="meta-table">
-        <thead><tr><th>Контекст</th><th>Свойство</th><th>Было</th><th>Стало</th></tr></thead>
-        <tbody>${metadataRows}</tbody>
-      </table>
-
-      <h3>Код (блоки)</h3>
-      ${codeBlocks}
-
-      <h3>Комментарии</h3>
-      <div class="comment-box">
-        <label>Комментарий к объекту:</label>
-        <textarea data-comment-type="object">${escapeHtml(object.objectComment || '')}</textarea>
+      <div class="inner-tabs">
+        <button class="inner-tab ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-inner-tab="meta">Свойства метаданных</button>
+        <button class="inner-tab ${this.activeInnerTab === 'code' ? 'active' : ''}" data-inner-tab="code">Код (блоки)</button>
+        <button class="inner-tab ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-inner-tab="comments">Комментарии</button>
       </div>
-      ${metaCommentAreas || '<p>Нет отдельных свойств для комментариев.</p>'}
+
+      <section class="inner-panel ${this.activeInnerTab === 'meta' ? 'active' : ''}" data-panel="meta">
+        <table class="meta-table">
+          <thead><tr><th>Раздел</th><th>Элемент</th><th>Свойство</th><th>Старое значение</th><th>Новое значение</th></tr></thead>
+          <tbody>${metaRows}</tbody>
+        </table>
+      </section>
+
+      <section class="inner-panel ${this.activeInnerTab === 'code' ? 'active' : ''}" data-panel="code">
+        ${codeBlocks}
+      </section>
+
+      <section class="inner-panel ${this.activeInnerTab === 'comments' ? 'active' : ''}" data-panel="comments">
+        <div class="comment-box">
+          <label>Комментарий к объекту:</label>
+          <textarea data-comment-type="object">${escapeHtml(object.objectComment || '')}</textarea>
+        </div>
+        ${diffComments}
+      </section>
     `;
+
+    this.root.querySelectorAll('.inner-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.activeInnerTab = btn.dataset.innerTab;
+        this.render(object);
+      });
+    });
 
     this.root.querySelectorAll('textarea').forEach((area) => {
       area.addEventListener('input', () => {
@@ -334,6 +388,7 @@ class ObjectCard {
     });
   }
 }
+
 
 class App {
   constructor() {
@@ -590,5 +645,5 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { Parser };
+  module.exports = { Parser, SessionStore };
 }

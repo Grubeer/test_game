@@ -95,6 +95,27 @@ input, select {
 .card { padding: 14px; overflow: auto; }
 .card.empty { color: #5d6679; }
 .card-header { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+
+.inner-tabs { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+.inner-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.inner-panel { display: none; }
+.inner-panel.active { display: block; }
+.code-hunk-wrap {
+  border: 1px solid #d5dcea;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+.code-hunk-head {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f1;
+  padding: 6px 8px;
+  background: #f3f6fc;
+}
+.pane-title { font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #4d5d7a; }
 .meta-table {
   width: 100%;
   border-collapse: collapse;

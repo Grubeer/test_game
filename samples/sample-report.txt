@@ -11,6 +11,10 @@
 > Число(18,2)
 
 Модуль объекта
+Изменено: 11462 - 11462
+< "···HTTPЗапрос = Новый HTTPЗапрос(\"form_order/?id=podpiska-na-ispolzovanie-hameleonegais-i-rassylka-obnovlenij-v-2022g.-dlya-1go-inn.-bez-dorabotok-i-konsultacij1&inn=\"+ИНН);"\n
+> "···HTTPЗапрос = Новый HTTPЗапрос(\"/form_order/?id=20192019&inn=\"+ИНН);"
+
 < Процедура ПередЗаписью(Отказ, РежимЗаписи)
 <   Если СуммаДокумента = 0 Тогда
 <     ЗапретитьЗапись = Истина;
